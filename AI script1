@@ -1,6 +1,6 @@
 local loadstring = loadstring or load
 local success, err = pcall(loadstring([[
--- 完整功能版Roblox GUI脚本
+-- 修复移动加速和飞行方向问题的完整脚本
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -21,14 +21,14 @@ end)
 
 -- 创建主UI - 放在CoreGui中防止死亡时被清除
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CompleteGUI"
+ScreenGui.Name = "FixedCompleteGUI"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 
 -- 主容器
 local MainContainer = Instance.new("Frame")
 MainContainer.Name = "MainContainer"
-MainContainer.Size = UDim2.new(0, 600, 0, 450) -- 增加高度以容纳新功能
+MainContainer.Size = UDim2.new(0, 600, 0, 450)
 MainContainer.Position = UDim2.new(0.5, -300, 0.5, -225)
 MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainContainer.BorderSizePixel = 0
@@ -524,6 +524,8 @@ local SelectedPlayer = nil
 local LockTeleportEnabled = false
 local LockTeleportConnection = nil
 local PlayerListExpanded = true
+local OriginalWalkSpeed = 16 -- 默认移动速度
+local SpeedBoostConnection = nil -- 移动加速连接
 
 -- 修复的UI动画函数
 local function createOpenAnimation()
@@ -785,7 +787,7 @@ local function toggleESP()
     end
 end
 
--- 飞行功能 - 面向正面
+-- 飞行功能 - 修复面向正面
 local function toggleFly()
     Flying = not Flying
     
@@ -829,7 +831,7 @@ local function toggleFly()
     end
 end
 
--- 移动加速功能
+-- 移动加速功能 - 修复版
 local function toggleSpeedBoost()
     SpeedBoostEnabled = not SpeedBoostEnabled
     
@@ -837,22 +839,40 @@ local function toggleSpeedBoost()
         SpeedBoostButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
         SpeedBoostButton.Text = "移动加速: 开启"
         
+        -- 保存原始速度
         local character = player.Character
         if character and character:FindFirstChild("Humanoid") then
+            OriginalWalkSpeed = character.Humanoid.WalkSpeed
             character.Humanoid.WalkSpeed = WalkSpeed
         end
+        
+        -- 创建持续更新速度的连接
+        SpeedBoostConnection = RunService.Heartbeat:Connect(function()
+            local character = player.Character
+            if character and character:FindFirstChild("Humanoid") then
+                -- 持续设置速度，防止被游戏重置
+                character.Humanoid.WalkSpeed = WalkSpeed
+            end
+        end)
     else
         SpeedBoostButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
         SpeedBoostButton.Text = "移动加速: 关闭"
         
+        -- 停止持续更新
+        if SpeedBoostConnection then
+            SpeedBoostConnection:Disconnect()
+            SpeedBoostConnection = nil
+        end
+        
+        -- 恢复原始速度
         local character = player.Character
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = 16 -- 默认速度
+            character.Humanoid.WalkSpeed = OriginalWalkSpeed
         end
     end
 end
 
--- 飞行控制 - 面向正面
+-- 飞行控制 - 修复面向正面
 local lastUpdate = 0
 local function updateFly()
     if not Flying or not BodyVelocity or not BodyGyro then return end
@@ -866,11 +886,14 @@ local function updateFly()
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     
     local root = character.HumanoidRootPart
+    
+    -- 获取相机方向
     local camCFrame = camera.CFrame
     local lookVector = camCFrame.LookVector
     local rightVector = camCFrame.RightVector
+    local upVector = Vector3.new(0, 1, 0)
     
-    -- 计算移动方向 - 面向正面
+    -- 计算移动方向
     local moveDirection = Vector3.new()
     if UserInputService:IsKeyDown(Enum.KeyCode.W) then 
         moveDirection = moveDirection + lookVector  -- 向前移动（面向镜头方向）
@@ -885,14 +908,16 @@ local function updateFly()
         moveDirection = moveDirection + rightVector  -- 向右移动
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
-        moveDirection = moveDirection + Vector3.new(0, 1, 0)  -- 上升
+        moveDirection = moveDirection + upVector  -- 上升
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then 
-        moveDirection = moveDirection - Vector3.new(0, 1, 0)  -- 下降
+        moveDirection = moveDirection - upVector  -- 下降
     end
     
-    -- 让人物面向镜头方向（正面）
-    BodyGyro.CFrame = CFrame.new(root.Position, root.Position + lookVector)
+    -- 修复：让人物真正面向镜头方向
+    -- 使用相机的CFrame但保持人物原本的Y轴旋转
+    local targetCFrame = CFrame.new(root.Position, root.Position + lookVector)
+    BodyGyro.CFrame = targetCFrame
     
     -- 应用速度
     if moveDirection.Magnitude > 0 then
@@ -1155,7 +1180,9 @@ player.CharacterAdded:Connect(function(character)
     
     -- 重新应用移动加速
     if SpeedBoostEnabled then
+        -- 保存原始速度
         if character and character:FindFirstChild("Humanoid") then
+            OriginalWalkSpeed = character.Humanoid.WalkSpeed
             character.Humanoid.WalkSpeed = WalkSpeed
         end
     end
@@ -1168,7 +1195,7 @@ updateWalkSpeedSlider()
 -- 飞行更新循环
 RunService.Heartbeat:Connect(updateFly)
 
-print("完整功能GUI加载完成！所有功能已添加。")
+print("修复版GUI加载完成！移动加速和飞行方向问题已修复。")
 ]]))
 
 if not success then
