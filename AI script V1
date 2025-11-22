@@ -1,0 +1,635 @@
+local loadstring = loadstring or load
+local success, err = pcall(loadstring([[
+-- 修复版Roblox GUI脚本 - 解决悬浮窗问题
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+-- 检测注入器名称
+local injectorName = "未知注入器"
+pcall(function()
+    if syn then injectorName = "Synapse X" end
+    if getexecutorname then injectorName = getexecutorname() or "KRNL" end
+    if identifyexecutor then injectorName = identifyexecutor() or "ScriptWare" end
+end)
+
+-- 创建主UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FixedGUI"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- 主容器
+local MainContainer = Instance.new("Frame")
+MainContainer.Name = "MainContainer"
+MainContainer.Size = UDim2.new(0, 500, 0, 350)
+MainContainer.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainContainer.BorderSizePixel = 0
+MainContainer.Visible = true
+MainContainer.Active = true
+MainContainer.Draggable = true -- 启用拖动
+MainContainer.Parent = ScreenGui
+
+-- 圆角
+local ContainerCorner = Instance.new("UICorner")
+ContainerCorner.CornerRadius = UDim.new(0, 8)
+ContainerCorner.Parent = MainContainer
+
+-- 标题栏（用于拖动）
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainContainer
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 8)
+TitleCorner.Parent = TitleBar
+
+-- 标题文本
+local TitleText = Instance.new("TextLabel")
+TitleText.Name = "TitleText"
+TitleText.Size = UDim2.new(1, -60, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "控制面板"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 14
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Font = Enum.Font.GothamBold
+TitleText.Parent = TitleBar
+
+-- 侧边栏
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 120, 1, -30)
+Sidebar.Position = UDim2.new(0, 0, 0, 30)
+Sidebar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = MainContainer
+
+-- 导航按钮
+local NavButtons = {"主页", "功能", "设置"}
+
+local NavContainer = Instance.new("Frame")
+NavContainer.Name = "NavContainer"
+NavContainer.Size = UDim2.new(1, 0, 1, 0)
+NavContainer.Position = UDim2.new(0, 0, 0, 0)
+NavContainer.BackgroundTransparency = 1
+NavContainer.Parent = Sidebar
+
+-- 创建导航按钮
+for i, name in ipairs(NavButtons) do
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(1, -10, 0, 32)
+    button.Position = UDim2.new(0, 5, 0, 10 + (i-1) * 37)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    button.BorderSizePixel = 0
+    button.Text = name
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 12
+    button.Font = Enum.Font.Gotham
+    button.Parent = NavContainer
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = button
+end
+
+-- 主内容区域
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -120, 1, -30)
+ContentFrame.Position = UDim2.new(0, 120, 0, 30)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainContainer
+
+-- 主页内容
+local HomePage = Instance.new("Frame")
+HomePage.Name = "HomePage"
+HomePage.Size = UDim2.new(1, 0, 1, 0)
+HomePage.BackgroundTransparency = 1
+HomePage.Visible = true
+HomePage.Parent = ContentFrame
+
+-- 用户信息
+local UserInfo = Instance.new("Frame")
+UserInfo.Name = "UserInfo"
+UserInfo.Size = UDim2.new(1, -20, 0, 80)
+UserInfo.Position = UDim2.new(0, 10, 0, 10)
+UserInfo.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+UserInfo.BorderSizePixel = 0
+UserInfo.Parent = HomePage
+
+local UserCorner = Instance.new("UICorner")
+UserCorner.CornerRadius = UDim.new(0, 8)
+UserCorner.Parent = UserInfo
+
+-- 用户信息显示
+local UserText = Instance.new("TextLabel")
+UserText.Name = "UserText"
+UserText.Size = UDim2.new(1, -10, 1, -10)
+UserText.Position = UDim2.new(0, 5, 0, 5)
+UserText.BackgroundTransparency = 1
+UserText.Text = "用户: " .. player.Name .. "\n注入器: " .. injectorName
+UserText.TextColor3 = Color3.fromRGB(255, 255, 255)
+UserText.TextSize = 14
+UserText.TextXAlignment = Enum.TextXAlignment.Left
+UserText.TextYAlignment = Enum.TextYAlignment.Top
+UserText.Font = Enum.Font.Gotham
+UserText.Parent = UserInfo
+
+-- 功能页面
+local FunctionsPage = Instance.new("Frame")
+FunctionsPage.Name = "FunctionsPage"
+FunctionsPage.Size = UDim2.new(1, 0, 1, 0)
+FunctionsPage.BackgroundTransparency = 1
+FunctionsPage.Visible = false
+FunctionsPage.Parent = ContentFrame
+
+-- 透视功能
+local ESPButton = Instance.new("TextButton")
+ESPButton.Name = "ESPButton"
+ESPButton.Size = UDim2.new(0.45, 0, 0, 35)
+ESPButton.Position = UDim2.new(0.025, 0, 0, 10)
+ESPButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+ESPButton.BorderSizePixel = 0
+ESPButton.Text = "透视: 关闭"
+ESPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPButton.TextSize = 14
+ESPButton.Font = Enum.Font.Gotham
+ESPButton.Parent = FunctionsPage
+
+local ESPCorner = Instance.new("UICorner")
+ESPCorner.CornerRadius = UDim.new(0, 6)
+ESPCorner.Parent = ESPButton
+
+-- 飞行功能
+local FlyButton = Instance.new("TextButton")
+FlyButton.Name = "FlyButton"
+FlyButton.Size = UDim2.new(0.45, 0, 0, 35)
+FlyButton.Position = UDim2.new(0.525, 0, 0, 10)
+FlyButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+FlyButton.BorderSizePixel = 0
+FlyButton.Text = "飞行: 关闭"
+FlyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyButton.TextSize = 14
+FlyButton.Font = Enum.Font.Gotham
+FlyButton.Parent = FunctionsPage
+
+local FlyCorner = Instance.new("UICorner")
+FlyCorner.CornerRadius = UDim.new(0, 6)
+FlyCorner.Parent = FlyButton
+
+-- 飞行速度滑块
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Name = "SpeedLabel"
+SpeedLabel.Size = UDim2.new(1, -20, 0, 20)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 60)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "飞行速度: 50"
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.TextSize = 14
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.Parent = FunctionsPage
+
+local SpeedSlider = Instance.new("Frame")
+SpeedSlider.Name = "SpeedSlider"
+SpeedSlider.Size = UDim2.new(1, -20, 0, 15)
+SpeedSlider.Position = UDim2.new(0, 10, 0, 85)
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+SpeedSlider.BorderSizePixel = 0
+SpeedSlider.Parent = FunctionsPage
+
+local SliderCorner = Instance.new("UICorner")
+SliderCorner.CornerRadius = UDim.new(0, 7)
+SliderCorner.Parent = SpeedSlider
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Name = "SliderFill"
+SliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+SliderFill.BorderSizePixel = 0
+SliderFill.Parent = SpeedSlider
+
+local FillCorner = Instance.new("UICorner")
+FillCorner.CornerRadius = UDim.new(0, 7)
+FillCorner.Parent = SliderFill
+
+local SliderButton = Instance.new("TextButton")
+SliderButton.Name = "SliderButton"
+SliderButton.Size = UDim2.new(1, 0, 1, 0)
+SliderButton.BackgroundTransparency = 1
+SliderButton.Text = ""
+SliderButton.Parent = SpeedSlider
+
+-- 最小化按钮
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
+MinimizeButton.Position = UDim2.new(1, -35, 0, 0)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Text = "×"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 18
+MinimizeButton.Visible = true
+MinimizeButton.Parent = TitleBar
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 6)
+MinimizeCorner.Parent = MinimizeButton
+
+-- 最小化后的按钮（悬浮窗）
+local MinimizedButton = Instance.new("TextButton")
+MinimizedButton.Name = "MinimizedButton"
+MinimizedButton.Size = UDim2.new(0, 50, 0, 50)
+MinimizedButton.Position = UDim2.new(0, 10, 0, 10)
+MinimizedButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+MinimizedButton.BorderSizePixel = 0
+MinimizedButton.Text = "+"
+MinimizedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizedButton.TextSize = 20
+MinimizedButton.Visible = false
+MinimizedButton.Parent = ScreenGui
+
+local MinimizedCorner = Instance.new("UICorner")
+MinimizedCorner.CornerRadius = UDim.new(0, 25)
+MinimizedCorner.Parent = MinimizedButton
+
+-- 变量
+local ESPEnabled = false
+local Flying = false
+local FlySpeed = 50
+local BodyVelocity, BodyGyro
+local ESPHighlights = {}
+local CurrentPage = "HomePage"
+
+-- 修复的UI动画函数
+local function createOpenAnimation()
+    -- 先显示主容器，隐藏悬浮按钮
+    MainContainer.Visible = true
+    MinimizedButton.Visible = false
+    
+    -- 保存原始大小和位置
+    local originalSize = MainContainer.Size
+    local originalPosition = MainContainer.Position
+    
+    -- 获取悬浮按钮的位置和大小
+    local buttonPos = MinimizedButton.AbsolutePosition
+    local buttonSize = MinimizedButton.AbsoluteSize
+    
+    -- 计算初始状态（从悬浮按钮位置开始）
+    local startSize = UDim2.new(0, buttonSize.X, 0, buttonSize.Y)
+    local startPos = UDim2.new(0, buttonPos.X, 0, buttonPos.Y)
+    
+    -- 设置初始状态
+    MainContainer.Size = startSize
+    MainContainer.Position = startPos
+    
+    -- 创建动画
+    local sizeTween = TweenService:Create(
+        MainContainer,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Size = originalSize}
+    )
+    
+    local positionTween = TweenService:Create(
+        MainContainer,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Position = originalPosition}
+    )
+    
+    -- 播放动画
+    sizeTween:Play()
+    positionTween:Play()
+end
+
+local function createCloseAnimation()
+    -- 获取目标状态（悬浮按钮的位置和大小）
+    local targetSize = MinimizedButton.Size
+    local targetPos = MinimizedButton.Position
+    
+    -- 创建动画
+    local sizeTween = TweenService:Create(
+        MainContainer,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {Size = targetSize}
+    )
+    
+    local positionTween = TweenService:Create(
+        MainContainer,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {Position = targetPos}
+    )
+    
+    -- 播放动画
+    sizeTween:Play()
+    positionTween:Play()
+    
+    -- 动画完成后隐藏主容器，显示悬浮按钮
+    spawn(function()
+        wait(0.25)
+        MainContainer.Visible = false
+        MinimizedButton.Visible = true
+    end)
+end
+
+-- 页面切换函数
+local function switchPage(pageName)
+    for _, child in ipairs(ContentFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child.Visible = false
+        end
+    end
+    
+    if ContentFrame:FindFirstChild(pageName) then
+        ContentFrame[pageName].Visible = true
+        CurrentPage = pageName
+    end
+end
+
+-- 透视功能
+local function toggleESP()
+    ESPEnabled = not ESPEnabled
+    
+    if ESPEnabled then
+        ESPButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        ESPButton.Text = "透视: 开启"
+        
+        -- 为所有玩家添加高亮
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character then
+                local highlight = Instance.new("Highlight")
+                highlight.Adornee = plr.Character
+                highlight.FillColor = Color3.fromRGB(255, 50, 50)
+                highlight.FillTransparency = 0.9
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+                highlight.OutlineTransparency = 0.2
+                highlight.Parent = plr.Character
+                ESPHighlights[plr] = highlight
+            end
+        end
+    else
+        ESPButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        ESPButton.Text = "透视: 关闭"
+        
+        -- 移除所有高亮
+        for plr, highlight in pairs(ESPHighlights) do
+            if highlight then
+                highlight:Destroy()
+            end
+        end
+        ESPHighlights = {}
+    end
+end
+
+-- 飞行功能
+local function toggleFly()
+    Flying = not Flying
+    
+    if Flying then
+        FlyButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        FlyButton.Text = "飞行: 开启"
+        
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            BodyVelocity = Instance.new("BodyVelocity")
+            BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+            BodyVelocity.Parent = character.HumanoidRootPart
+            
+            BodyGyro = Instance.new("BodyGyro")
+            BodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+            BodyGyro.P = 1000
+            BodyGyro.Parent = character.HumanoidRootPart
+            
+            if character:FindFirstChild("Humanoid") then
+                character.Humanoid.PlatformStand = true
+            end
+        end
+    else
+        FlyButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        FlyButton.Text = "飞行: 关闭"
+        
+        if BodyVelocity then 
+            BodyVelocity:Destroy()
+            BodyVelocity = nil
+        end
+        if BodyGyro then 
+            BodyGyro:Destroy() 
+            BodyGyro = nil
+        end
+        
+        local character = player.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.PlatformStand = false
+        end
+    end
+end
+
+-- 飞行控制
+local lastUpdate = 0
+local function updateFly()
+    if not Flying or not BodyVelocity or not BodyGyro then return end
+    
+    -- 限制更新频率
+    local now = tick()
+    if now - lastUpdate < 0.016 then return end
+    lastUpdate = now
+    
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local root = character.HumanoidRootPart
+    local camCFrame = camera.CFrame
+    local lookVector = camCFrame.LookVector
+    local rightVector = camCFrame.RightVector
+    
+    -- 计算移动方向
+    local moveDirection = Vector3.new()
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then 
+        moveDirection = moveDirection - lookVector
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then 
+        moveDirection = moveDirection + lookVector
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then 
+        moveDirection = moveDirection - rightVector
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then 
+        moveDirection = moveDirection + rightVector
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
+        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then 
+        moveDirection = moveDirection - Vector3.new(0, 1, 0)
+    end
+    
+    -- 让人物背对镜头
+    BodyGyro.CFrame = CFrame.new(root.Position, root.Position - lookVector)
+    
+    -- 应用速度
+    if moveDirection.Magnitude > 0 then
+        BodyVelocity.Velocity = moveDirection.Unit * FlySpeed
+    else
+        BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    end
+end
+
+-- 更新速度滑块
+local function updateSpeedSlider()
+    local ratio = FlySpeed / 100
+    SliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+    SpeedLabel.Text = "飞行速度: " .. FlySpeed
+end
+
+-- 事件处理
+MinimizeButton.MouseButton1Click:Connect(function()
+    createCloseAnimation()
+end)
+
+MinimizedButton.MouseButton1Click:Connect(function()
+    createOpenAnimation()
+end)
+
+-- 导航按钮点击
+for _, button in ipairs(NavContainer:GetChildren()) do
+    if button:IsA("TextButton") then
+        button.MouseButton1Click:Connect(function()
+            if button.Text == "主页" then
+                switchPage("HomePage")
+            elseif button.Text == "功能" then
+                switchPage("FunctionsPage")
+            end
+        end)
+    end
+end
+
+ESPButton.MouseButton1Click:Connect(toggleESP)
+FlyButton.MouseButton1Click:Connect(toggleFly)
+
+-- 速度滑块控制
+SliderButton.MouseButton1Down:Connect(function()
+    local connection
+    connection = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderPos = SpeedSlider.AbsolutePosition.X
+            local sliderSize = SpeedSlider.AbsoluteSize.X
+            
+            local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
+            local ratio = x / sliderSize
+            FlySpeed = math.floor(ratio * 100)
+            updateSpeedSlider()
+        end
+    end)
+    
+    local endConnection
+    endConnection = UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            connection:Disconnect()
+            endConnection:Disconnect()
+        end
+    end)
+end)
+
+-- 悬浮窗按钮拖动
+local dragging = false
+local dragStart, startPos
+
+MinimizedButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MinimizedButton.Position
+    end
+end)
+
+MinimizedButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        local newX = math.clamp(startPos.X.Offset + delta.X, 0, ScreenGui.AbsoluteSize.X - MinimizedButton.AbsoluteSize.X)
+        local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, ScreenGui.AbsoluteSize.Y - MinimizedButton.AbsoluteSize.Y)
+        MinimizedButton.Position = UDim2.new(0, newX, 0, newY)
+    end
+end)
+
+-- 玩家处理
+Players.PlayerAdded:Connect(function(plr)
+    if ESPEnabled and plr.Character then
+        spawn(function()
+            wait(0.1)
+            if ESPEnabled and plr.Character then
+                local highlight = Instance.new("Highlight")
+                highlight.Adornee = plr.Character
+                highlight.FillColor = Color3.fromRGB(255, 50, 50)
+                highlight.FillTransparency = 0.9
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+                highlight.OutlineTransparency = 0.2
+                highlight.Parent = plr.Character
+                ESPHighlights[plr] = highlight
+            end
+        end)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    if ESPHighlights[plr] then
+        ESPHighlights[plr]:Destroy()
+        ESPHighlights[plr] = nil
+    end
+end)
+
+-- 角色重生处理
+player.CharacterAdded:Connect(function(character)
+    if Flying then
+        spawn(function()
+            wait(1)
+            if Flying then
+                toggleFly()
+                toggleFly()
+            end
+        end)
+    end
+    if ESPEnabled then
+        spawn(function()
+            wait(1)
+            if ESPEnabled then
+                toggleESP()
+                toggleESP()
+            end
+        end)
+    end
+end)
+
+-- 初始化
+updateSpeedSlider()
+
+-- 飞行更新循环
+RunService.Heartbeat:Connect(updateFly)
+
+print("修复版GUI加载完成！悬浮窗问题已解决。")
+]]))
+
+if not success then
+    warn("脚本加载错误: " .. tostring(err))
+else
+    print("脚本成功加载！")
+end
