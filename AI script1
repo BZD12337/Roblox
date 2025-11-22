@@ -1,6 +1,6 @@
 local loadstring = loadstring or load
 local success, err = pcall(loadstring([[
--- 修复死亡后界面消失问题的Roblox GUI脚本
+-- 完整功能版Roblox GUI脚本
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -21,15 +21,15 @@ end)
 
 -- 创建主UI - 放在CoreGui中防止死亡时被清除
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PersistentGUI"
+ScreenGui.Name = "CompleteGUI"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui -- 放在CoreGui而不是PlayerGui
+ScreenGui.Parent = CoreGui
 
 -- 主容器
 local MainContainer = Instance.new("Frame")
 MainContainer.Name = "MainContainer"
-MainContainer.Size = UDim2.new(0, 500, 0, 350)
-MainContainer.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainContainer.Size = UDim2.new(0, 600, 0, 450) -- 增加高度以容纳新功能
+MainContainer.Position = UDim2.new(0.5, -300, 0.5, -225)
 MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainContainer.BorderSizePixel = 0
 MainContainer.Visible = true
@@ -77,7 +77,7 @@ Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainContainer
 
 -- 导航按钮
-local NavButtons = {"主页", "功能", "设置"}
+local NavButtons = {"主页", "功能", "传送", "设置"}
 
 local NavContainer = Instance.new("Frame")
 NavContainer.Name = "NavContainer"
@@ -233,6 +233,249 @@ SliderButton.BackgroundTransparency = 1
 SliderButton.Text = ""
 SliderButton.Parent = SpeedSlider
 
+-- 移动速度功能
+local SpeedBoostButton = Instance.new("TextButton")
+SpeedBoostButton.Name = "SpeedBoostButton"
+SpeedBoostButton.Size = UDim2.new(0.45, 0, 0, 35)
+SpeedBoostButton.Position = UDim2.new(0.025, 0, 0, 120)
+SpeedBoostButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+SpeedBoostButton.BorderSizePixel = 0
+SpeedBoostButton.Text = "移动加速: 关闭"
+SpeedBoostButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedBoostButton.TextSize = 14
+SpeedBoostButton.Font = Enum.Font.Gotham
+SpeedBoostButton.Parent = FunctionsPage
+
+local SpeedBoostCorner = Instance.new("UICorner")
+SpeedBoostCorner.CornerRadius = UDim.new(0, 6)
+SpeedBoostCorner.Parent = SpeedBoostButton
+
+-- 移动速度滑块
+local WalkSpeedLabel = Instance.new("TextLabel")
+WalkSpeedLabel.Name = "WalkSpeedLabel"
+WalkSpeedLabel.Size = UDim2.new(1, -20, 0, 20)
+WalkSpeedLabel.Position = UDim2.new(0, 10, 0, 170)
+WalkSpeedLabel.BackgroundTransparency = 1
+WalkSpeedLabel.Text = "移动速度: 50"
+WalkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WalkSpeedLabel.TextSize = 14
+WalkSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+WalkSpeedLabel.Font = Enum.Font.Gotham
+WalkSpeedLabel.Parent = FunctionsPage
+
+local WalkSpeedSlider = Instance.new("Frame")
+WalkSpeedSlider.Name = "WalkSpeedSlider"
+WalkSpeedSlider.Size = UDim2.new(1, -20, 0, 15)
+WalkSpeedSlider.Position = UDim2.new(0, 10, 0, 195)
+WalkSpeedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+WalkSpeedSlider.BorderSizePixel = 0
+WalkSpeedSlider.Parent = FunctionsPage
+
+local WalkSliderCorner = Instance.new("UICorner")
+WalkSliderCorner.CornerRadius = UDim.new(0, 7)
+WalkSliderCorner.Parent = WalkSpeedSlider
+
+local WalkSliderFill = Instance.new("Frame")
+WalkSliderFill.Name = "WalkSliderFill"
+WalkSliderFill.Size = UDim2.new(0.1, 0, 1, 0) -- 默认50/500=0.1
+WalkSliderFill.BackgroundColor3 = Color3.fromRGB(80, 255, 160)
+WalkSliderFill.BorderSizePixel = 0
+WalkSliderFill.Parent = WalkSpeedSlider
+
+local WalkFillCorner = Instance.new("UICorner")
+WalkFillCorner.CornerRadius = UDim.new(0, 7)
+WalkFillCorner.Parent = WalkSliderFill
+
+local WalkSliderButton = Instance.new("TextButton")
+WalkSliderButton.Name = "WalkSliderButton"
+WalkSliderButton.Size = UDim2.new(1, 0, 1, 0)
+WalkSliderButton.BackgroundTransparency = 1
+WalkSliderButton.Text = ""
+WalkSliderButton.Parent = WalkSpeedSlider
+
+-- 传送功能页面
+local TeleportPage = Instance.new("Frame")
+TeleportPage.Name = "TeleportPage"
+TeleportPage.Size = UDim2.new(1, 0, 1, 0)
+TeleportPage.BackgroundTransparency = 1
+TeleportPage.Visible = false
+TeleportPage.Parent = ContentFrame
+
+-- 玩家列表容器
+local PlayerListContainer = Instance.new("Frame")
+PlayerListContainer.Name = "PlayerListContainer"
+PlayerListContainer.Size = UDim2.new(0.6, 0, 1, -10)
+PlayerListContainer.Position = UDim2.new(0, 0, 0, 5)
+PlayerListContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+PlayerListContainer.BorderSizePixel = 0
+PlayerListContainer.Parent = TeleportPage
+
+local PlayerListCorner = Instance.new("UICorner")
+PlayerListCorner.CornerRadius = UDim.new(0, 8)
+PlayerListCorner.Parent = PlayerListContainer
+
+-- 玩家列表标题
+local PlayerListTitle = Instance.new("TextLabel")
+PlayerListTitle.Name = "PlayerListTitle"
+PlayerListTitle.Size = UDim2.new(1, 0, 0, 30)
+PlayerListTitle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+PlayerListTitle.BorderSizePixel = 0
+PlayerListTitle.Text = "玩家列表"
+PlayerListTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerListTitle.TextSize = 14
+PlayerListTitle.Font = Enum.Font.GothamBold
+PlayerListTitle.Parent = PlayerListContainer
+
+local PlayerListTitleCorner = Instance.new("UICorner")
+PlayerListTitleCorner.CornerRadius = UDim.new(0, 8)
+PlayerListTitleCorner.Parent = PlayerListTitle
+
+-- 折叠按钮
+local ToggleListButton = Instance.new("TextButton")
+ToggleListButton.Name = "ToggleListButton"
+ToggleListButton.Size = UDim2.new(0, 30, 0, 30)
+ToggleListButton.Position = UDim2.new(1, -35, 0, 0)
+ToggleListButton.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+ToggleListButton.BorderSizePixel = 0
+ToggleListButton.Text = "◀"
+ToggleListButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleListButton.TextSize = 14
+ToggleListButton.Parent = PlayerListTitle
+
+local ToggleListCorner = Instance.new("UICorner")
+ToggleListCorner.CornerRadius = UDim.new(0, 6)
+ToggleListCorner.Parent = ToggleListButton
+
+-- 玩家列表滚动框
+local PlayerScrollFrame = Instance.new("ScrollingFrame")
+PlayerScrollFrame.Name = "PlayerScrollFrame"
+PlayerScrollFrame.Size = UDim2.new(1, -10, 1, -40)
+PlayerScrollFrame.Position = UDim2.new(0, 5, 0, 35)
+PlayerScrollFrame.BackgroundTransparency = 1
+PlayerScrollFrame.BorderSizePixel = 0
+PlayerScrollFrame.ScrollBarThickness = 5
+PlayerScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerScrollFrame.Parent = PlayerListContainer
+
+-- 传送控制区域
+local TeleportControlContainer = Instance.new("Frame")
+TeleportControlContainer.Name = "TeleportControlContainer"
+TeleportControlContainer.Size = UDim2.new(0.35, 0, 1, -10)
+TeleportControlContainer.Position = UDim2.new(0.65, 0, 0, 5)
+TeleportControlContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+TeleportControlContainer.BorderSizePixel = 0
+TeleportControlContainer.Parent = TeleportPage
+
+local TeleportControlCorner = Instance.new("UICorner")
+TeleportControlCorner.CornerRadius = UDim.new(0, 8)
+TeleportControlCorner.Parent = TeleportControlContainer
+
+-- 传送按钮
+local TeleportButton = Instance.new("TextButton")
+TeleportButton.Name = "TeleportButton"
+TeleportButton.Size = UDim2.new(1, -20, 0, 40)
+TeleportButton.Position = UDim2.new(0, 10, 0, 20)
+TeleportButton.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+TeleportButton.BorderSizePixel = 0
+TeleportButton.Text = "传送到玩家"
+TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportButton.TextSize = 14
+TeleportButton.Font = Enum.Font.Gotham
+TeleportButton.Parent = TeleportControlContainer
+
+local TeleportCorner = Instance.new("UICorner")
+TeleportCorner.CornerRadius = UDim.new(0, 6)
+TeleportCorner.Parent = TeleportButton
+
+-- 锁定传送按钮
+local LockTeleportButton = Instance.new("TextButton")
+LockTeleportButton.Name = "LockTeleportButton"
+LockTeleportButton.Size = UDim2.new(1, -20, 0, 40)
+LockTeleportButton.Position = UDim2.new(0, 10, 0, 70)
+LockTeleportButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+LockTeleportButton.BorderSizePixel = 0
+LockTeleportButton.Text = "锁定传送: 关闭"
+LockTeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LockTeleportButton.TextSize = 14
+LockTeleportButton.Font = Enum.Font.Gotham
+LockTeleportButton.Parent = TeleportControlContainer
+
+local LockTeleportCorner = Instance.new("UICorner")
+LockTeleportCorner.CornerRadius = UDim.new(0, 6)
+LockTeleportCorner.Parent = LockTeleportButton
+
+-- 选中的玩家显示
+local SelectedPlayerLabel = Instance.new("TextLabel")
+SelectedPlayerLabel.Name = "SelectedPlayerLabel"
+SelectedPlayerLabel.Size = UDim2.new(1, -20, 0, 40)
+SelectedPlayerLabel.Position = UDim2.new(0, 10, 0, 130)
+SelectedPlayerLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+SelectedPlayerLabel.BorderSizePixel = 0
+SelectedPlayerLabel.Text = "未选择玩家"
+SelectedPlayerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SelectedPlayerLabel.TextSize = 14
+SelectedPlayerLabel.Font = Enum.Font.Gotham
+SelectedPlayerLabel.Parent = TeleportControlContainer
+
+local SelectedPlayerCorner = Instance.new("UICorner")
+SelectedPlayerCorner.CornerRadius = UDim.new(0, 6)
+SelectedPlayerCorner.Parent = SelectedPlayerLabel
+
+-- 设置页面
+local SettingsPage = Instance.new("Frame")
+SettingsPage.Name = "SettingsPage"
+SettingsPage.Size = UDim2.new(1, 0, 1, 0)
+SettingsPage.BackgroundTransparency = 1
+SettingsPage.Visible = false
+SettingsPage.Parent = ContentFrame
+
+-- 设置标题
+local SettingsTitle = Instance.new("TextLabel")
+SettingsTitle.Name = "SettingsTitle"
+SettingsTitle.Size = UDim2.new(1, -20, 0, 30)
+SettingsTitle.Position = UDim2.new(0, 10, 0, 10)
+SettingsTitle.BackgroundTransparency = 1
+SettingsTitle.Text = "设置"
+SettingsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsTitle.TextSize = 18
+SettingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+SettingsTitle.Font = Enum.Font.GothamBold
+SettingsTitle.Parent = SettingsPage
+
+-- 重置UI位置按钮
+local ResetUIButton = Instance.new("TextButton")
+ResetUIButton.Name = "ResetUIButton"
+ResetUIButton.Size = UDim2.new(0.5, -15, 0, 35)
+ResetUIButton.Position = UDim2.new(0, 10, 0, 50)
+ResetUIButton.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+ResetUIButton.BorderSizePixel = 0
+ResetUIButton.Text = "重置UI位置"
+ResetUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetUIButton.TextSize = 14
+ResetUIButton.Font = Enum.Font.Gotham
+ResetUIButton.Parent = SettingsPage
+
+local ResetUICorner = Instance.new("UICorner")
+ResetUICorner.CornerRadius = UDim.new(0, 6)
+ResetUICorner.Parent = ResetUIButton
+
+-- 隐藏UI按钮
+local HideUIButton = Instance.new("TextButton")
+HideUIButton.Name = "HideUIButton"
+HideUIButton.Size = UDim2.new(0.5, -15, 0, 35)
+HideUIButton.Position = UDim2.new(0.5, 5, 0, 50)
+HideUIButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+HideUIButton.BorderSizePixel = 0
+HideUIButton.Text = "隐藏UI"
+HideUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HideUIButton.TextSize = 14
+HideUIButton.Font = Enum.Font.Gotham
+HideUIButton.Parent = SettingsPage
+
+local HideUICorner = Instance.new("UICorner")
+HideUICorner.CornerRadius = UDim.new(0, 6)
+HideUICorner.Parent = HideUIButton
+
 -- 最小化按钮
 local MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Name = "MinimizeButton"
@@ -271,10 +514,16 @@ MinimizedCorner.Parent = MinimizedButton
 local ESPEnabled = false
 local Flying = false
 local FlySpeed = 50
+local SpeedBoostEnabled = false
+local WalkSpeed = 50
 local BodyVelocity, BodyGyro
 local ESPHighlights = {}
 local CurrentPage = "HomePage"
-local isAnimating = false -- 防止动画冲突
+local isAnimating = false
+local SelectedPlayer = nil
+local LockTeleportEnabled = false
+local LockTeleportConnection = nil
+local PlayerListExpanded = true
 
 -- 修复的UI动画函数
 local function createOpenAnimation()
@@ -286,8 +535,8 @@ local function createOpenAnimation()
     MinimizedButton.Visible = false
     
     -- 保存原始大小和位置
-    local originalSize = UDim2.new(0, 500, 0, 350)
-    local originalPosition = UDim2.new(0.5, -250, 0.5, -175)
+    local originalSize = UDim2.new(0, 600, 0, 450)
+    local originalPosition = UDim2.new(0.5, -300, 0.5, -225)
     
     -- 获取悬浮按钮的位置和大小
     local buttonPos = MinimizedButton.AbsolutePosition
@@ -368,6 +617,136 @@ local function switchPage(pageName)
     if ContentFrame:FindFirstChild(pageName) then
         ContentFrame[pageName].Visible = true
         CurrentPage = pageName
+        
+        -- 如果切换到传送页面，更新玩家列表
+        if pageName == "TeleportPage" then
+            updatePlayerList()
+        end
+    end
+end
+
+-- 更新玩家列表
+local function updatePlayerList()
+    -- 清除现有玩家按钮
+    for _, child in ipairs(PlayerScrollFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    -- 添加玩家按钮
+    local players = Players:GetPlayers()
+    local yOffset = 0
+    
+    for i, plr in ipairs(players) do
+        if plr ~= player then
+            local playerButton = Instance.new("TextButton")
+            playerButton.Name = plr.Name .. "Button"
+            playerButton.Size = UDim2.new(1, -10, 0, 30)
+            playerButton.Position = UDim2.new(0, 5, 0, yOffset)
+            playerButton.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+            playerButton.BorderSizePixel = 0
+            playerButton.Text = plr.Name
+            playerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            playerButton.TextSize = 12
+            playerButton.Font = Enum.Font.Gotham
+            playerButton.Parent = PlayerScrollFrame
+            
+            local playerButtonCorner = Instance.new("UICorner")
+            playerButtonCorner.CornerRadius = UDim.new(0, 6)
+            playerButtonCorner.Parent = playerButton
+            
+            -- 点击选择玩家
+            playerButton.MouseButton1Click:Connect(function()
+                SelectedPlayer = plr
+                SelectedPlayerLabel.Text = "已选择: " .. plr.Name
+                
+                -- 高亮选中的按钮
+                for _, btn in ipairs(PlayerScrollFrame:GetChildren()) do
+                    if btn:IsA("TextButton") then
+                        if btn == playerButton then
+                            btn.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+                        else
+                            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+                        end
+                    end
+                end
+            end)
+            
+            yOffset = yOffset + 35
+        end
+    end
+    
+    -- 更新滚动区域大小
+    PlayerScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+end
+
+-- 传送功能
+local function teleportToPlayer()
+    if not SelectedPlayer or not SelectedPlayer.Character then
+        return
+    end
+    
+    local targetChar = SelectedPlayer.Character
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+    local playerChar = player.Character
+    local playerRoot = playerChar and playerChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetRoot and playerRoot then
+        -- 传送到玩家旁边
+        playerRoot.CFrame = targetRoot.CFrame + targetRoot.CFrame.LookVector * 5
+    end
+end
+
+-- 锁定传送功能
+local function toggleLockTeleport()
+    LockTeleportEnabled = not LockTeleportEnabled
+    
+    if LockTeleportEnabled then
+        LockTeleportButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        LockTeleportButton.Text = "锁定传送: 开启"
+        
+        -- 开始循环传送
+        LockTeleportConnection = RunService.Heartbeat:Connect(function()
+            if not SelectedPlayer or not SelectedPlayer.Character then
+                return
+            end
+            
+            local targetChar = SelectedPlayer.Character
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            local playerChar = player.Character
+            local playerRoot = playerChar and playerChar:FindFirstChild("HumanoidRootPart")
+            
+            if targetRoot and playerRoot then
+                -- 传送到玩家头顶并面向玩家
+                local offset = Vector3.new(0, 3, 0) -- 头顶偏移
+                playerRoot.CFrame = CFrame.new(targetRoot.Position + offset, targetRoot.Position)
+            end
+        end)
+    else
+        LockTeleportButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        LockTeleportButton.Text = "锁定传送: 关闭"
+        
+        -- 停止循环传送
+        if LockTeleportConnection then
+            LockTeleportConnection:Disconnect()
+            LockTeleportConnection = nil
+        end
+    end
+end
+
+-- 折叠/展开玩家列表
+local function togglePlayerList()
+    PlayerListExpanded = not PlayerListExpanded
+    
+    if PlayerListExpanded then
+        PlayerListContainer.Size = UDim2.new(0.6, 0, 1, -10)
+        ToggleListButton.Text = "◀"
+        PlayerScrollFrame.Visible = true
+    else
+        PlayerListContainer.Size = UDim2.new(0, 150, 1, -10)
+        ToggleListButton.Text = "▶"
+        PlayerScrollFrame.Visible = false
     end
 end
 
@@ -450,6 +829,29 @@ local function toggleFly()
     end
 end
 
+-- 移动加速功能
+local function toggleSpeedBoost()
+    SpeedBoostEnabled = not SpeedBoostEnabled
+    
+    if SpeedBoostEnabled then
+        SpeedBoostButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        SpeedBoostButton.Text = "移动加速: 开启"
+        
+        local character = player.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = WalkSpeed
+        end
+    else
+        SpeedBoostButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        SpeedBoostButton.Text = "移动加速: 关闭"
+        
+        local character = player.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = 16 -- 默认速度
+        end
+    end
+end
+
 -- 飞行控制 - 面向正面
 local lastUpdate = 0
 local function updateFly()
@@ -500,21 +902,42 @@ local function updateFly()
     end
 end
 
--- 更新速度滑块
+-- 更新飞行速度滑块
 local function updateSpeedSlider()
     local ratio = FlySpeed / 100
     SliderFill.Size = UDim2.new(ratio, 0, 1, 0)
     SpeedLabel.Text = "飞行速度: " .. FlySpeed
 end
 
--- 事件处理
-MinimizeButton.MouseButton1Click:Connect(function()
-    createCloseAnimation()
-end)
+-- 更新移动速度滑块
+local function updateWalkSpeedSlider()
+    local ratio = WalkSpeed / 500  -- 最大500
+    WalkSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+    WalkSpeedLabel.Text = "移动速度: " .. WalkSpeed
+    
+    -- 如果加速开启，立即应用新速度
+    if SpeedBoostEnabled then
+        local character = player.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = WalkSpeed
+        end
+    end
+end
 
-MinimizedButton.MouseButton1Click:Connect(function()
-    createOpenAnimation()
-end)
+-- 重置UI位置
+local function resetUIPosition()
+    MainContainer.Position = UDim2.new(0.5, -300, 0.5, -225)
+    MinimizedButton.Position = UDim2.new(0, 10, 0, 10)
+end
+
+-- 隐藏UI
+local function hideUI()
+    ScreenGui.Enabled = false
+end
+
+-- 事件处理
+MinimizeButton.MouseButton1Click:Connect(createCloseAnimation)
+MinimizedButton.MouseButton1Click:Connect(createOpenAnimation)
 
 -- 导航按钮点击
 for _, button in ipairs(NavContainer:GetChildren()) do
@@ -524,15 +947,30 @@ for _, button in ipairs(NavContainer:GetChildren()) do
                 switchPage("HomePage")
             elseif button.Text == "功能" then
                 switchPage("FunctionsPage")
+            elseif button.Text == "传送" then
+                switchPage("TeleportPage")
+            elseif button.Text == "设置" then
+                switchPage("SettingsPage")
             end
         end)
     end
 end
 
+-- 功能按钮
 ESPButton.MouseButton1Click:Connect(toggleESP)
 FlyButton.MouseButton1Click:Connect(toggleFly)
+SpeedBoostButton.MouseButton1Click:Connect(toggleSpeedBoost)
 
--- 速度滑块控制
+-- 传送功能按钮
+TeleportButton.MouseButton1Click:Connect(teleportToPlayer)
+LockTeleportButton.MouseButton1Click:Connect(toggleLockTeleport)
+ToggleListButton.MouseButton1Click:Connect(togglePlayerList)
+
+-- 设置按钮
+ResetUIButton.MouseButton1Click:Connect(resetUIPosition)
+HideUIButton.MouseButton1Click:Connect(hideUI)
+
+-- 飞行速度滑块控制
 SliderButton.MouseButton1Down:Connect(function()
     local connection
     connection = UserInputService.InputChanged:Connect(function(input)
@@ -545,6 +983,31 @@ SliderButton.MouseButton1Down:Connect(function()
             local ratio = x / sliderSize
             FlySpeed = math.floor(ratio * 100)
             updateSpeedSlider()
+        end
+    end)
+    
+    local endConnection
+    endConnection = UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            connection:Disconnect()
+            endConnection:Disconnect()
+        end
+    end)
+end)
+
+-- 移动速度滑块控制
+WalkSliderButton.MouseButton1Down:Connect(function()
+    local connection
+    connection = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderPos = WalkSpeedSlider.AbsolutePosition.X
+            local sliderSize = WalkSpeedSlider.AbsoluteSize.X
+            
+            local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
+            local ratio = x / sliderSize
+            WalkSpeed = math.floor(ratio * 500)  -- 最大500
+            updateWalkSpeedSlider()
         end
     end)
     
@@ -601,12 +1064,28 @@ Players.PlayerAdded:Connect(function(plr)
             end
         end)
     end
+    
+    -- 更新玩家列表
+    if CurrentPage == "TeleportPage" then
+        updatePlayerList()
+    end
 end)
 
 Players.PlayerRemoving:Connect(function(plr)
     if ESPHighlights[plr] then
         ESPHighlights[plr]:Destroy()
         ESPHighlights[plr] = nil
+    end
+    
+    -- 如果选中的玩家离开，清除选择
+    if SelectedPlayer == plr then
+        SelectedPlayer = nil
+        SelectedPlayerLabel.Text = "未选择玩家"
+    end
+    
+    -- 更新玩家列表
+    if CurrentPage == "TeleportPage" then
+        updatePlayerList()
     end
 end)
 
@@ -617,7 +1096,6 @@ player.CharacterAdded:Connect(function(character)
     
     -- 重新应用飞行状态
     if Flying then
-        -- 先关闭再开启，确保飞行组件正确创建
         local wasFlying = Flying
         Flying = false
         FlyButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
@@ -649,7 +1127,6 @@ player.CharacterAdded:Connect(function(character)
     
     -- 重新应用透视状态
     if ESPEnabled then
-        -- 先关闭再开启，确保高亮正确创建
         local wasESP = ESPEnabled
         ESPEnabled = false
         ESPButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
@@ -675,15 +1152,23 @@ player.CharacterAdded:Connect(function(character)
             end
         end
     end
+    
+    -- 重新应用移动加速
+    if SpeedBoostEnabled then
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = WalkSpeed
+        end
+    end
 end)
 
 -- 初始化
 updateSpeedSlider()
+updateWalkSpeedSlider()
 
 -- 飞行更新循环
 RunService.Heartbeat:Connect(updateFly)
 
-print("持久化GUI加载完成！死亡后界面不会消失。")
+print("完整功能GUI加载完成！所有功能已添加。")
 ]]))
 
 if not success then
