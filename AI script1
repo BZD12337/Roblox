@@ -1,6 +1,6 @@
 local loadstring = loadstring or load
 local success, err = pcall(loadstring([[
--- 修改滑稽走路速度的娱乐功能脚本
+-- 娱乐功能脚本
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -20,7 +20,7 @@ pcall(function()
     if identifyexecutor then injectorName = identifyexecutor() or "ScriptWare" end
 end)
 
--- 创建主UI - 放在CoreGui中防止死亡时被清除
+-- 创建主UI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EntertainmentGUI"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -29,8 +29,8 @@ ScreenGui.Parent = CoreGui
 -- 主容器
 local MainContainer = Instance.new("Frame")
 MainContainer.Name = "MainContainer"
-MainContainer.Size = UDim2.new(0, 600, 0, 500)
-MainContainer.Position = UDim2.new(0.5, -300, 0.5, -250)
+MainContainer.Size = UDim2.new(0, 600, 0, 550) -- 增加高度以容纳新滑块
+MainContainer.Position = UDim2.new(0.5, -300, 0.5, -275)
 MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainContainer.BorderSizePixel = 0
 MainContainer.Visible = true
@@ -77,7 +77,7 @@ Sidebar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainContainer
 
--- 导航按钮 - 添加娱乐功能
+-- 导航按钮
 local NavButtons = {"主页", "功能", "传送", "娱乐", "设置"}
 
 local NavContainer = Instance.new("Frame")
@@ -197,7 +197,7 @@ SpeedLabel.Name = "SpeedLabel"
 SpeedLabel.Size = UDim2.new(1, -20, 0, 20)
 SpeedLabel.Position = UDim2.new(0, 10, 0, 60)
 SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "飞行速度: 50"
+SpeedLabel.Text = "飞行速度: 500"
 SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedLabel.TextSize = 14
 SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -460,28 +460,11 @@ local FunnyWalkCorner = Instance.new("UICorner")
 FunnyWalkCorner.CornerRadius = UDim.new(0, 6)
 FunnyWalkCorner.Parent = FunnyWalkButton
 
--- 跳舞功能
-local DanceButton = Instance.new("TextButton")
-DanceButton.Name = "DanceButton"
-DanceButton.Size = UDim2.new(0.45, 0, 0, 35)
-DanceButton.Position = UDim2.new(0.525, 0, 0, 50)
-DanceButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-DanceButton.BorderSizePixel = 0
-DanceButton.Text = "跳舞: 关闭"
-DanceButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-DanceButton.TextSize = 14
-DanceButton.Font = Enum.Font.Gotham
-DanceButton.Parent = EntertainmentPage
-
-local DanceCorner = Instance.new("UICorner")
-DanceCorner.CornerRadius = UDim.new(0, 6)
-DanceCorner.Parent = DanceButton
-
 -- 变大变小功能
 local SizeToggleButton = Instance.new("TextButton")
 SizeToggleButton.Name = "SizeToggleButton"
 SizeToggleButton.Size = UDim2.new(0.45, 0, 0, 35)
-SizeToggleButton.Position = UDim2.new(0.025, 0, 0, 95)
+SizeToggleButton.Position = UDim2.new(0.525, 0, 0, 50)
 SizeToggleButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 SizeToggleButton.BorderSizePixel = 0
 SizeToggleButton.Text = "变大变小: 关闭"
@@ -498,7 +481,7 @@ SizeToggleCorner.Parent = SizeToggleButton
 local RainbowEffectButton = Instance.new("TextButton")
 RainbowEffectButton.Name = "RainbowEffectButton"
 RainbowEffectButton.Size = UDim2.new(0.45, 0, 0, 35)
-RainbowEffectButton.Position = UDim2.new(0.525, 0, 0, 95)
+RainbowEffectButton.Position = UDim2.new(0.025, 0, 0, 95)
 RainbowEffectButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 RainbowEffectButton.BorderSizePixel = 0
 RainbowEffectButton.Text = "彩虹特效: 关闭"
@@ -511,13 +494,30 @@ local RainbowEffectCorner = Instance.new("UICorner")
 RainbowEffectCorner.CornerRadius = UDim.new(0, 6)
 RainbowEffectCorner.Parent = RainbowEffectButton
 
--- 滑稽走路速度滑块
+-- 弹飞功能
+local LaunchButton = Instance.new("TextButton")
+LaunchButton.Name = "LaunchButton"
+LaunchButton.Size = UDim2.new(0.45, 0, 0, 35)
+LaunchButton.Position = UDim2.new(0.525, 0, 0, 95)
+LaunchButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+LaunchButton.BorderSizePixel = 0
+LaunchButton.Text = "弹飞: 关闭"
+LaunchButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LaunchButton.TextSize = 14
+LaunchButton.Font = Enum.Font.Gotham
+LaunchButton.Parent = EntertainmentPage
+
+local LaunchCorner = Instance.new("UICorner")
+LaunchCorner.CornerRadius = UDim.new(0, 6)
+LaunchCorner.Parent = LaunchButton
+
+-- 滑稽走路动画速度滑块
 local FunnyWalkSpeedLabel = Instance.new("TextLabel")
 FunnyWalkSpeedLabel.Name = "FunnyWalkSpeedLabel"
 FunnyWalkSpeedLabel.Size = UDim2.new(1, -20, 0, 20)
 FunnyWalkSpeedLabel.Position = UDim2.new(0, 10, 0, 150)
 FunnyWalkSpeedLabel.BackgroundTransparency = 1
-FunnyWalkSpeedLabel.Text = "走路动画速度: 100"
+FunnyWalkSpeedLabel.Text = "走路动画速度: 1250"
 FunnyWalkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FunnyWalkSpeedLabel.TextSize = 14
 FunnyWalkSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -538,7 +538,7 @@ FunnyWalkSliderCorner.Parent = FunnyWalkSpeedSlider
 
 local FunnyWalkSliderFill = Instance.new("Frame")
 FunnyWalkSliderFill.Name = "FunnyWalkSliderFill"
-FunnyWalkSliderFill.Size = UDim2.new(0.1, 0, 1, 0) -- 默认100/1000=0.1
+FunnyWalkSliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- 默认1250/2500=0.5
 FunnyWalkSliderFill.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
 FunnyWalkSliderFill.BorderSizePixel = 0
 FunnyWalkSliderFill.Parent = FunnyWalkSpeedSlider
@@ -553,6 +553,92 @@ FunnyWalkSliderButton.Size = UDim2.new(1, 0, 1, 0)
 FunnyWalkSliderButton.BackgroundTransparency = 1
 FunnyWalkSliderButton.Text = ""
 FunnyWalkSliderButton.Parent = FunnyWalkSpeedSlider
+
+-- 滑稽走路移动速度滑块
+local FunnyWalkMoveSpeedLabel = Instance.new("TextLabel")
+FunnyWalkMoveSpeedLabel.Name = "FunnyWalkMoveSpeedLabel"
+FunnyWalkMoveSpeedLabel.Size = UDim2.new(1, -20, 0, 20)
+FunnyWalkMoveSpeedLabel.Position = UDim2.new(0, 10, 0, 210)
+FunnyWalkMoveSpeedLabel.BackgroundTransparency = 1
+FunnyWalkMoveSpeedLabel.Text = "走路移动速度: 250"
+FunnyWalkMoveSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FunnyWalkMoveSpeedLabel.TextSize = 14
+FunnyWalkMoveSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+FunnyWalkMoveSpeedLabel.Font = Enum.Font.Gotham
+FunnyWalkMoveSpeedLabel.Parent = EntertainmentPage
+
+local FunnyWalkMoveSpeedSlider = Instance.new("Frame")
+FunnyWalkMoveSpeedSlider.Name = "FunnyWalkMoveSpeedSlider"
+FunnyWalkMoveSpeedSlider.Size = UDim2.new(1, -20, 0, 15)
+FunnyWalkMoveSpeedSlider.Position = UDim2.new(0, 10, 0, 235)
+FunnyWalkMoveSpeedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+FunnyWalkMoveSpeedSlider.BorderSizePixel = 0
+FunnyWalkMoveSpeedSlider.Parent = EntertainmentPage
+
+local FunnyWalkMoveSliderCorner = Instance.new("UICorner")
+FunnyWalkMoveSliderCorner.CornerRadius = UDim.new(0, 7)
+FunnyWalkMoveSliderCorner.Parent = FunnyWalkMoveSpeedSlider
+
+local FunnyWalkMoveSliderFill = Instance.new("Frame")
+FunnyWalkMoveSliderFill.Name = "FunnyWalkMoveSliderFill"
+FunnyWalkMoveSliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- 默认250/500=0.5
+FunnyWalkMoveSliderFill.BackgroundColor3 = Color3.fromRGB(150, 255, 150)
+FunnyWalkMoveSliderFill.BorderSizePixel = 0
+FunnyWalkMoveSliderFill.Parent = FunnyWalkMoveSpeedSlider
+
+local FunnyWalkMoveFillCorner = Instance.new("UICorner")
+FunnyWalkMoveFillCorner.CornerRadius = UDim.new(0, 7)
+FunnyWalkMoveFillCorner.Parent = FunnyWalkMoveSliderFill
+
+local FunnyWalkMoveSliderButton = Instance.new("TextButton")
+FunnyWalkMoveSliderButton.Name = "FunnyWalkMoveSliderButton"
+FunnyWalkMoveSliderButton.Size = UDim2.new(1, 0, 1, 0)
+FunnyWalkMoveSliderButton.BackgroundTransparency = 1
+FunnyWalkMoveSliderButton.Text = ""
+FunnyWalkMoveSliderButton.Parent = FunnyWalkMoveSpeedSlider
+
+-- 弹飞旋转速度滑块
+local LaunchSpinSpeedLabel = Instance.new("TextLabel")
+LaunchSpinSpeedLabel.Name = "LaunchSpinSpeedLabel"
+LaunchSpinSpeedLabel.Size = UDim2.new(1, -20, 0, 20)
+LaunchSpinSpeedLabel.Position = UDim2.new(0, 10, 0, 270)
+LaunchSpinSpeedLabel.BackgroundTransparency = 1
+LaunchSpinSpeedLabel.Text = "弹飞旋转速度: 10000"
+LaunchSpinSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+LaunchSpinSpeedLabel.TextSize = 14
+LaunchSpinSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+LaunchSpinSpeedLabel.Font = Enum.Font.Gotham
+LaunchSpinSpeedLabel.Parent = EntertainmentPage
+
+local LaunchSpinSpeedSlider = Instance.new("Frame")
+LaunchSpinSpeedSlider.Name = "LaunchSpinSpeedSlider"
+LaunchSpinSpeedSlider.Size = UDim2.new(1, -20, 0, 15)
+LaunchSpinSpeedSlider.Position = UDim2.new(0, 10, 0, 295)
+LaunchSpinSpeedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+LaunchSpinSpeedSlider.BorderSizePixel = 0
+LaunchSpinSpeedSlider.Parent = EntertainmentPage
+
+local LaunchSpinSliderCorner = Instance.new("UICorner")
+LaunchSpinSliderCorner.CornerRadius = UDim.new(0, 7)
+LaunchSpinSliderCorner.Parent = LaunchSpinSpeedSlider
+
+local LaunchSpinSliderFill = Instance.new("Frame")
+LaunchSpinSliderFill.Name = "LaunchSpinSliderFill"
+LaunchSpinSliderFill.Size = UDim2.new(0.5, 0, 1, 0) -- 默认10000/20000=0.5
+LaunchSpinSliderFill.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+LaunchSpinSliderFill.BorderSizePixel = 0
+LaunchSpinSliderFill.Parent = LaunchSpinSpeedSlider
+
+local LaunchSpinFillCorner = Instance.new("UICorner")
+LaunchSpinFillCorner.CornerRadius = UDim.new(0, 7)
+LaunchSpinFillCorner.Parent = LaunchSpinSliderFill
+
+local LaunchSpinSliderButton = Instance.new("TextButton")
+LaunchSpinSliderButton.Name = "LaunchSpinSliderButton"
+LaunchSpinSliderButton.Size = UDim2.new(1, 0, 1, 0)
+LaunchSpinSliderButton.BackgroundTransparency = 1
+LaunchSpinSliderButton.Text = ""
+LaunchSpinSliderButton.Parent = LaunchSpinSpeedSlider
 
 -- 设置页面
 local SettingsPage = Instance.new("Frame")
@@ -646,7 +732,7 @@ MinimizedCorner.Parent = MinimizedButton
 -- 变量
 local ESPEnabled = false
 local Flying = false
-local FlySpeed = 50
+local FlySpeed = 500  -- 默认值改为500
 local SpeedBoostEnabled = false
 local WalkSpeed = 50
 local BodyVelocity, BodyGyro
@@ -662,14 +748,22 @@ local SpeedBoostConnection = nil
 
 -- 娱乐功能变量
 local FunnyWalkEnabled = false
-local FunnyWalkSpeed = 100  -- 默认速度改为100
+local FunnyWalkSpeed = 1250  -- 默认值改为1250
+local FunnyWalkMoveSpeed = 250  -- 新增：滑稽走路移动速度
 local FunnyWalkConnection = nil
-local DanceEnabled = false
 local SizeToggleEnabled = false
 local SizeToggleConnection = nil
 local RainbowEffectEnabled = false
 local RainbowEffectConnection = nil
 local OriginalSize = Vector3.new(1, 1, 1)
+
+-- 弹飞功能变量
+local LaunchEnabled = false
+local LaunchConnection = nil
+local SpinVelocity = nil
+local LaunchSpinSpeed = 10000  -- 默认旋转速度
+local OriginalCameraType = nil
+local PositionLock = nil
 
 -- 修复的UI动画函数
 local function createOpenAnimation()
@@ -681,8 +775,8 @@ local function createOpenAnimation()
     MinimizedButton.Visible = false
     
     -- 保存原始大小和位置
-    local originalSize = UDim2.new(0, 600, 0, 500)
-    local originalPosition = UDim2.new(0.5, -300, 0.5, -250)
+    local originalSize = UDim2.new(0, 600, 0, 550)
+    local originalPosition = UDim2.new(0.5, -300, 0.5, -275)
     
     -- 获取悬浮按钮的位置和大小
     local buttonPos = MinimizedButton.AbsolutePosition
@@ -1028,8 +1122,8 @@ local function toggleFunnyWalk()
         FunnyWalkConnection = RunService.Heartbeat:Connect(function()
             local character = player.Character
             if character and character:FindFirstChild("Humanoid") then
-                -- 设置超快的走路动画速度
-                character.Humanoid.WalkSpeed = 8  -- 实际移动速度慢
+                -- 设置走路速度
+                character.Humanoid.WalkSpeed = FunnyWalkMoveSpeed  -- 使用滑块设置的移动速度
                 
                 -- 尝试修改动画速度（如果可能）
                 local animate = character:FindFirstChild("Animate")
@@ -1070,39 +1164,6 @@ local function toggleFunnyWalk()
                     end
                 end
             end
-        end
-    end
-end
-
--- 跳舞功能
-local function toggleDance()
-    DanceEnabled = not DanceEnabled
-    
-    if DanceEnabled then
-        DanceButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
-        DanceButton.Text = "跳舞: 开启"
-        
-        local character = player.Character
-        if character and character:FindFirstChild("Humanoid") then
-            -- 创建跳舞动画
-            local danceAnimation = Instance.new("Animation")
-            danceAnimation.AnimationId = "rbxassetid://33796059"  -- 跳舞动画ID
-            
-            local danceTrack = character.Humanoid:LoadAnimation(danceAnimation)
-            danceTrack:Play()
-            danceTrack.Looped = true
-            
-            -- 保存跳舞轨道以便停止
-            DanceButton.DanceTrack = danceTrack
-        end
-    else
-        DanceButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        DanceButton.Text = "跳舞: 关闭"
-        
-        -- 停止跳舞
-        if DanceButton.DanceTrack then
-            DanceButton.DanceTrack:Stop()
-            DanceButton.DanceTrack = nil
         end
     end
 end
@@ -1222,11 +1283,146 @@ local function toggleRainbowEffect()
     end
 end
 
--- 更新滑稽走路速度滑块
+-- 弹飞功能 - 改进版
+local function toggleLaunch()
+    LaunchEnabled = not LaunchEnabled
+    
+    if LaunchEnabled then
+        LaunchButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        LaunchButton.Text = "弹飞: 开启"
+        
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            -- 保存当前位置
+            local rootPart = character.HumanoidRootPart
+            local originalPosition = rootPart.Position
+            
+            -- 创建位置锁定（防止自己被甩飞）
+            PositionLock = Instance.new("BodyPosition")
+            PositionLock.Position = originalPosition
+            PositionLock.MaxForce = Vector3.new(100000, 100000, 100000)
+            PositionLock.P = 100000
+            PositionLock.Parent = rootPart
+            
+            -- 创建超高速旋转
+            SpinVelocity = Instance.new("BodyAngularVelocity")
+            SpinVelocity.AngularVelocity = Vector3.new(0, LaunchSpinSpeed, 0)  -- 使用滑块设置的旋转速度
+            SpinVelocity.MaxTorque = Vector3.new(0, 1000000, 0)
+            SpinVelocity.P = 1000000
+            SpinVelocity.Parent = rootPart
+            
+            -- 保存原始摄像机类型并设置为固定
+            OriginalCameraType = camera.CameraType
+            camera.CameraType = Enum.CameraType.Scriptable
+            
+            -- 创建摄像机稳定连接
+            local cameraStabilizer = RunService.Heartbeat:Connect(function()
+                -- 保持摄像机稳定，不跟随角色旋转
+                if character and rootPart then
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + camera.CFrame.LookVector)
+                    
+                    -- 更新位置锁定，保持角色在原地
+                    PositionLock.Position = originalPosition
+                end
+            end)
+            
+            -- 碰撞检测
+            LaunchConnection = rootPart.Touched:Connect(function(hit)
+                local hitPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+                if hitPlayer and hitPlayer ~= player then
+                    local hitChar = hitPlayer.Character
+                    if hitChar and hitChar:FindFirstChild("HumanoidRootPart") then
+                        -- 计算弹飞方向（从自己指向被碰到的玩家）
+                        local direction = (hitChar.HumanoidRootPart.Position - rootPart.Position).Unit
+                        
+                        -- 施加弹飞力，力度与旋转速度成正比
+                        local launchForce = LaunchSpinSpeed / 100  -- 根据旋转速度计算弹飞力度
+                        local bodyVelocity = Instance.new("BodyVelocity")
+                        bodyVelocity.Velocity = direction * launchForce + Vector3.new(0, 50, 0)  -- 向前上方弹飞
+                        bodyVelocity.MaxForce = Vector3.new(1000000, 1000000, 1000000)
+                        bodyVelocity.Parent = hitChar.HumanoidRootPart
+                        
+                        -- 3秒后移除弹飞力
+                        delay(3, function()
+                            if bodyVelocity and bodyVelocity.Parent then
+                                bodyVelocity:Destroy()
+                            end
+                        end)
+                    end
+                end
+            end)
+            
+            -- 保存摄像机稳定器以便清理
+            LaunchButton.CameraStabilizer = cameraStabilizer
+        end
+    else
+        LaunchButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        LaunchButton.Text = "弹飞: 关闭"
+        
+        -- 停止旋转
+        if SpinVelocity then
+            SpinVelocity:Destroy()
+            SpinVelocity = nil
+        end
+        
+        -- 移除位置锁定
+        if PositionLock then
+            PositionLock:Destroy()
+            PositionLock = nil
+        end
+        
+        -- 恢复摄像机类型
+        if OriginalCameraType then
+            camera.CameraType = OriginalCameraType
+            OriginalCameraType = nil
+        end
+        
+        -- 停止摄像机稳定
+        if LaunchButton.CameraStabilizer then
+            LaunchButton.CameraStabilizer:Disconnect()
+            LaunchButton.CameraStabilizer = nil
+        end
+        
+        -- 停止碰撞检测
+        if LaunchConnection then
+            LaunchConnection:Disconnect()
+            LaunchConnection = nil
+        end
+    end
+end
+
+-- 更新滑稽走路动画速度滑块
 local function updateFunnyWalkSpeedSlider()
-    local ratio = FunnyWalkSpeed / 1000  -- 最大1000
+    local ratio = FunnyWalkSpeed / 2500  -- 最大2500
     FunnyWalkSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
     FunnyWalkSpeedLabel.Text = "走路动画速度: " .. FunnyWalkSpeed
+end
+
+-- 更新滑稽走路移动速度滑块
+local function updateFunnyWalkMoveSpeedSlider()
+    local ratio = FunnyWalkMoveSpeed / 500  -- 最大500
+    FunnyWalkMoveSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+    FunnyWalkMoveSpeedLabel.Text = "走路移动速度: " .. FunnyWalkMoveSpeed
+    
+    -- 如果滑稽走路已开启，立即应用新速度
+    if FunnyWalkEnabled then
+        local character = player.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = FunnyWalkMoveSpeed
+        end
+    end
+end
+
+-- 更新弹飞旋转速度滑块
+local function updateLaunchSpinSpeedSlider()
+    local ratio = LaunchSpinSpeed / 20000  -- 最大20000
+    LaunchSpinSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+    LaunchSpinSpeedLabel.Text = "弹飞旋转速度: " .. LaunchSpinSpeed
+    
+    -- 如果弹飞已开启，立即应用新速度
+    if LaunchEnabled and SpinVelocity then
+        SpinVelocity.AngularVelocity = Vector3.new(0, LaunchSpinSpeed, 0)
+    end
 end
 
 -- 飞行控制 - 修复面向正面
@@ -1286,7 +1482,7 @@ end
 
 -- 更新飞行速度滑块
 local function updateSpeedSlider()
-    local ratio = FlySpeed / 100
+    local ratio = FlySpeed / 1000  -- 最大1000
     SliderFill.Size = UDim2.new(ratio, 0, 1, 0)
     SpeedLabel.Text = "飞行速度: " .. FlySpeed
 end
@@ -1308,7 +1504,7 @@ end
 
 -- 重置UI位置
 local function resetUIPosition()
-    MainContainer.Position = UDim2.new(0.5, -300, 0.5, -250)
+    MainContainer.Position = UDim2.new(0.5, -300, 0.5, -275)
     MinimizedButton.Position = UDim2.new(0, 10, 0, 10)
 end
 
@@ -1347,9 +1543,9 @@ SpeedBoostButton.MouseButton1Click:Connect(toggleSpeedBoost)
 
 -- 娱乐功能按钮
 FunnyWalkButton.MouseButton1Click:Connect(toggleFunnyWalk)
-DanceButton.MouseButton1Click:Connect(toggleDance)
 SizeToggleButton.MouseButton1Click:Connect(toggleSize)
 RainbowEffectButton.MouseButton1Click:Connect(toggleRainbowEffect)
+LaunchButton.MouseButton1Click:Connect(toggleLaunch)  -- 添加弹飞按钮
 
 -- 传送功能按钮
 TeleportButton.MouseButton1Click:Connect(teleportToPlayer)
@@ -1371,7 +1567,7 @@ SliderButton.MouseButton1Down:Connect(function()
             
             local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
             local ratio = x / sliderSize
-            FlySpeed = math.floor(ratio * 100)
+            FlySpeed = math.floor(ratio * 1000)  -- 最大1000
             updateSpeedSlider()
         end
     end)
@@ -1408,9 +1604,9 @@ WalkSliderButton.MouseButton1Down:Connect(function()
             endConnection:Disconnect()
         end
     end)
-end
+end)
 
--- 滑稽走路速度滑块控制 - 修改为最高1000
+-- 滑稽走路动画速度滑块控制
 FunnyWalkSliderButton.MouseButton1Down:Connect(function()
     local connection
     connection = UserInputService.InputChanged:Connect(function(input)
@@ -1421,7 +1617,7 @@ FunnyWalkSliderButton.MouseButton1Down:Connect(function()
             
             local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
             local ratio = x / sliderSize
-            FunnyWalkSpeed = math.floor(ratio * 1000)  -- 最大1000
+            FunnyWalkSpeed = math.floor(ratio * 2500)  -- 最大2500
             updateFunnyWalkSpeedSlider()
             
             -- 如果滑稽走路已开启，立即应用新速度
@@ -1438,6 +1634,56 @@ FunnyWalkSliderButton.MouseButton1Down:Connect(function()
                     end
                 end
             end
+        end
+    end)
+    
+    local endConnection
+    endConnection = UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            connection:Disconnect()
+            endConnection:Disconnect()
+        end
+    end)
+end)
+
+-- 滑稽走路移动速度滑块控制
+FunnyWalkMoveSliderButton.MouseButton1Down:Connect(function()
+    local connection
+    connection = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderPos = FunnyWalkMoveSpeedSlider.AbsolutePosition.X
+            local sliderSize = FunnyWalkMoveSpeedSlider.AbsoluteSize.X
+            
+            local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
+            local ratio = x / sliderSize
+            FunnyWalkMoveSpeed = math.floor(ratio * 500)  -- 最大500
+            updateFunnyWalkMoveSpeedSlider()
+        end
+    end)
+    
+    local endConnection
+    endConnection = UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            connection:Disconnect()
+            endConnection:Disconnect()
+        end
+    end)
+end)
+
+-- 弹飞旋转速度滑块控制
+LaunchSpinSliderButton.MouseButton1Down:Connect(function()
+    local connection
+    connection = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderPos = LaunchSpinSpeedSlider.AbsolutePosition.X
+            local sliderSize = LaunchSpinSpeedSlider.AbsoluteSize.X
+            
+            local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
+            local ratio = x / sliderSize
+            LaunchSpinSpeed = math.floor(ratio * 20000)  -- 最大20000
+            updateLaunchSpinSpeedSlider()
         end
     end)
     
@@ -1594,23 +1840,56 @@ player.CharacterAdded:Connect(function(character)
     
     -- 重新应用娱乐功能
     if FunnyWalkEnabled then
-        toggleFunnyWalk()
-        toggleFunnyWalk()
-    end
-    
-    if DanceEnabled then
-        toggleDance()
-        toggleDance()
+        local wasFunnyWalk = FunnyWalkEnabled
+        FunnyWalkEnabled = false
+        FunnyWalkButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        FunnyWalkButton.Text = "滑稽走路: 关闭"
+        
+        wait(0.1)
+        
+        FunnyWalkEnabled = true
+        FunnyWalkButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        FunnyWalkButton.Text = "滑稽走路: 开启"
     end
     
     if SizeToggleEnabled then
-        toggleSize()
-        toggleSize()
+        local wasSizeToggle = SizeToggleEnabled
+        SizeToggleEnabled = false
+        SizeToggleButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        SizeToggleButton.Text = "变大变小: 关闭"
+        
+        wait(0.1)
+        
+        SizeToggleEnabled = true
+        SizeToggleButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        SizeToggleButton.Text = "变大变小: 开启"
     end
     
     if RainbowEffectEnabled then
-        toggleRainbowEffect()
-        toggleRainbowEffect()
+        local wasRainbow = RainbowEffectEnabled
+        RainbowEffectEnabled = false
+        RainbowEffectButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        RainbowEffectButton.Text = "彩虹特效: 关闭"
+        
+        wait(0.1)
+        
+        RainbowEffectEnabled = true
+        RainbowEffectButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        RainbowEffectButton.Text = "彩虹特效: 开启"
+    end
+    
+    -- 重新应用弹飞功能
+    if LaunchEnabled then
+        local wasLaunch = LaunchEnabled
+        LaunchEnabled = false
+        LaunchButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        LaunchButton.Text = "弹飞: 关闭"
+        
+        wait(0.1)
+        
+        LaunchEnabled = true
+        LaunchButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        LaunchButton.Text = "弹飞: 开启"
     end
 end)
 
@@ -1618,11 +1897,13 @@ end)
 updateSpeedSlider()
 updateWalkSpeedSlider()
 updateFunnyWalkSpeedSlider()
+updateFunnyWalkMoveSpeedSlider()
+updateLaunchSpinSpeedSlider()
 
 -- 飞行更新循环
 RunService.Heartbeat:Connect(updateFly)
 
-print("娱乐功能版GUI加载完成！滑稽走路速度最高可达1000倍！")
+print("娱乐功能版GUI加载完成！已修复错误并添加滑稽走路移动速度滑块。")
 ]]))
 
 if not success then
