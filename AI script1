@@ -1,6 +1,6 @@
 local loadstring = loadstring or load
 local success, err = pcall(loadstring([[
--- 添加娱乐功能的完整脚本
+-- 修改滑稽走路速度的娱乐功能脚本
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -29,7 +29,7 @@ ScreenGui.Parent = CoreGui
 -- 主容器
 local MainContainer = Instance.new("Frame")
 MainContainer.Name = "MainContainer"
-MainContainer.Size = UDim2.new(0, 600, 0, 500) -- 增加高度以容纳娱乐功能
+MainContainer.Size = UDim2.new(0, 600, 0, 500)
 MainContainer.Position = UDim2.new(0.5, -300, 0.5, -250)
 MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainContainer.BorderSizePixel = 0
@@ -517,7 +517,7 @@ FunnyWalkSpeedLabel.Name = "FunnyWalkSpeedLabel"
 FunnyWalkSpeedLabel.Size = UDim2.new(1, -20, 0, 20)
 FunnyWalkSpeedLabel.Position = UDim2.new(0, 10, 0, 150)
 FunnyWalkSpeedLabel.BackgroundTransparency = 1
-FunnyWalkSpeedLabel.Text = "走路动画速度: 10"
+FunnyWalkSpeedLabel.Text = "走路动画速度: 100"
 FunnyWalkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FunnyWalkSpeedLabel.TextSize = 14
 FunnyWalkSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -538,7 +538,7 @@ FunnyWalkSliderCorner.Parent = FunnyWalkSpeedSlider
 
 local FunnyWalkSliderFill = Instance.new("Frame")
 FunnyWalkSliderFill.Name = "FunnyWalkSliderFill"
-FunnyWalkSliderFill.Size = UDim2.new(0.2, 0, 1, 0) -- 默认10/50=0.2
+FunnyWalkSliderFill.Size = UDim2.new(0.1, 0, 1, 0) -- 默认100/1000=0.1
 FunnyWalkSliderFill.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
 FunnyWalkSliderFill.BorderSizePixel = 0
 FunnyWalkSliderFill.Parent = FunnyWalkSpeedSlider
@@ -662,7 +662,7 @@ local SpeedBoostConnection = nil
 
 -- 娱乐功能变量
 local FunnyWalkEnabled = false
-local FunnyWalkSpeed = 10
+local FunnyWalkSpeed = 100  -- 默认速度改为100
 local FunnyWalkConnection = nil
 local DanceEnabled = false
 local SizeToggleEnabled = false
@@ -1224,7 +1224,7 @@ end
 
 -- 更新滑稽走路速度滑块
 local function updateFunnyWalkSpeedSlider()
-    local ratio = FunnyWalkSpeed / 50  -- 最大50
+    local ratio = FunnyWalkSpeed / 1000  -- 最大1000
     FunnyWalkSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
     FunnyWalkSpeedLabel.Text = "走路动画速度: " .. FunnyWalkSpeed
 end
@@ -1408,9 +1408,9 @@ WalkSliderButton.MouseButton1Down:Connect(function()
             endConnection:Disconnect()
         end
     end)
-end)
+end
 
--- 滑稽走路速度滑块控制
+-- 滑稽走路速度滑块控制 - 修改为最高1000
 FunnyWalkSliderButton.MouseButton1Down:Connect(function()
     local connection
     connection = UserInputService.InputChanged:Connect(function(input)
@@ -1421,7 +1421,7 @@ FunnyWalkSliderButton.MouseButton1Down:Connect(function()
             
             local x = math.clamp(mousePos.X - sliderPos, 0, sliderSize)
             local ratio = x / sliderSize
-            FunnyWalkSpeed = math.floor(ratio * 50)  -- 最大50
+            FunnyWalkSpeed = math.floor(ratio * 1000)  -- 最大1000
             updateFunnyWalkSpeedSlider()
             
             -- 如果滑稽走路已开启，立即应用新速度
@@ -1622,7 +1622,7 @@ updateFunnyWalkSpeedSlider()
 -- 飞行更新循环
 RunService.Heartbeat:Connect(updateFly)
 
-print("娱乐功能版GUI加载完成！新增了4个娱乐功能。")
+print("娱乐功能版GUI加载完成！滑稽走路速度最高可达1000倍！")
 ]]))
 
 if not success then
