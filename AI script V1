@@ -1,6 +1,6 @@
 local loadstring = loadstring or load
 local success, err = pcall(loadstring([[
--- 修复版Roblox GUI脚本 - 解决悬浮窗问题
+-- 修复版Roblox GUI脚本 - 解决UI压缩和飞行方向问题
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -33,7 +33,7 @@ MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainContainer.BorderSizePixel = 0
 MainContainer.Visible = true
 MainContainer.Active = true
-MainContainer.Draggable = true -- 启用拖动
+MainContainer.Draggable = true
 MainContainer.Parent = ScreenGui
 
 -- 圆角
@@ -273,16 +273,20 @@ local FlySpeed = 50
 local BodyVelocity, BodyGyro
 local ESPHighlights = {}
 local CurrentPage = "HomePage"
+local isAnimating = false -- 防止动画冲突
 
 -- 修复的UI动画函数
 local function createOpenAnimation()
+    if isAnimating then return end
+    isAnimating = true
+    
     -- 先显示主容器，隐藏悬浮按钮
     MainContainer.Visible = true
     MinimizedButton.Visible = false
     
     -- 保存原始大小和位置
-    local originalSize = MainContainer.Size
-    local originalPosition = MainContainer.Position
+    local originalSize = UDim2.new(0, 500, 0, 350)
+    local originalPosition = UDim2.new(0.5, -250, 0.5, -175)
     
     -- 获取悬浮按钮的位置和大小
     local buttonPos = MinimizedButton.AbsolutePosition
@@ -292,29 +296,37 @@ local function createOpenAnimation()
     local startSize = UDim2.new(0, buttonSize.X, 0, buttonSize.Y)
     local startPos = UDim2.new(0, buttonPos.X, 0, buttonPos.Y)
     
-    -- 设置初始状态
+    -- 确保设置正确的初始状态
     MainContainer.Size = startSize
     MainContainer.Position = startPos
     
     -- 创建动画
     local sizeTween = TweenService:Create(
         MainContainer,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Size = originalSize}
     )
     
     local positionTween = TweenService:Create(
         MainContainer,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Position = originalPosition}
     )
     
     -- 播放动画
     sizeTween:Play()
     positionTween:Play()
+    
+    -- 动画完成后重置标志
+    delay(0.3, function()
+        isAnimating = false
+    end)
 end
 
 local function createCloseAnimation()
+    if isAnimating then return end
+    isAnimating = true
+    
     -- 获取目标状态（悬浮按钮的位置和大小）
     local targetSize = MinimizedButton.Size
     local targetPos = MinimizedButton.Position
@@ -322,13 +334,13 @@ local function createCloseAnimation()
     -- 创建动画
     local sizeTween = TweenService:Create(
         MainContainer,
-        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
         {Size = targetSize}
     )
     
     local positionTween = TweenService:Create(
         MainContainer,
-        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
         {Position = targetPos}
     )
     
@@ -337,10 +349,10 @@ local function createCloseAnimation()
     positionTween:Play()
     
     -- 动画完成后隐藏主容器，显示悬浮按钮
-    spawn(function()
-        wait(0.25)
+    delay(0.25, function()
         MainContainer.Visible = false
         MinimizedButton.Visible = true
+        isAnimating = false
     end)
 end
 
@@ -393,7 +405,7 @@ local function toggleESP()
     end
 end
 
--- 飞行功能
+-- 飞行功能 - 改为面向正面
 local function toggleFly()
     Flying = not Flying
     
@@ -437,7 +449,7 @@ local function toggleFly()
     end
 end
 
--- 飞行控制
+-- 飞行控制 - 改为面向正面
 local lastUpdate = 0
 local function updateFly()
     if not Flying or not BodyVelocity or not BodyGyro then return end
@@ -455,29 +467,29 @@ local function updateFly()
     local lookVector = camCFrame.LookVector
     local rightVector = camCFrame.RightVector
     
-    -- 计算移动方向
+    -- 计算移动方向 - 改为面向正面
     local moveDirection = Vector3.new()
     if UserInputService:IsKeyDown(Enum.KeyCode.W) then 
-        moveDirection = moveDirection - lookVector
+        moveDirection = moveDirection + lookVector  -- 向前移动（面向镜头方向）
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.S) then 
-        moveDirection = moveDirection + lookVector
+        moveDirection = moveDirection - lookVector  -- 向后移动（背对镜头方向）
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.A) then 
-        moveDirection = moveDirection - rightVector
+        moveDirection = moveDirection - rightVector  -- 向左移动
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.D) then 
-        moveDirection = moveDirection + rightVector
+        moveDirection = moveDirection + rightVector  -- 向右移动
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
-        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        moveDirection = moveDirection + Vector3.new(0, 1, 0)  -- 上升
     end
     if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then 
-        moveDirection = moveDirection - Vector3.new(0, 1, 0)
+        moveDirection = moveDirection - Vector3.new(0, 1, 0)  -- 下降
     end
     
-    -- 让人物背对镜头
-    BodyGyro.CFrame = CFrame.new(root.Position, root.Position - lookVector)
+    -- 让人物面向镜头方向（正面）
+    BodyGyro.CFrame = CFrame.new(root.Position, root.Position + lookVector)
     
     -- 应用速度
     if moveDirection.Magnitude > 0 then
@@ -625,7 +637,7 @@ updateSpeedSlider()
 -- 飞行更新循环
 RunService.Heartbeat:Connect(updateFly)
 
-print("修复版GUI加载完成！悬浮窗问题已解决。")
+print("修复版GUI加载完成！UI压缩问题和飞行方向已修复。")
 ]]))
 
 if not success then
