@@ -1,7 +1,7 @@
 --开源
 local loadstring = loadstring or load
 local success, err = pcall(loadstring([[
--- 自瞄+ESP多功能脚本
+-- 自瞄+ESP多功能脚本（队伍检查版）
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
+local Teams = game:GetService("Teams")
 
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
@@ -28,6 +29,8 @@ local LockedTarget = nil
 local FOV = 100
 local PredictionEnabled = false
 local PredictionPing = 0
+local AimbotActive = false
+local IgnoreTeam = true -- 是否忽略队友
 
 -- ESP变量
 local ESPEnabled = false
@@ -35,12 +38,14 @@ local BoxESPEnabled = true
 local SkeletonESPEnabled = true
 local NameESPEnabled = true
 local ToolESPEnabled = true
+local TeamColorESPEnabled = true -- 队伍颜色ESP开关
 
 -- ESP颜色设置
 local BoxColor = Color3.fromRGB(255, 50, 50)
 local SkeletonColor = Color3.fromRGB(255, 255, 255)
 local NameColor = Color3.fromRGB(255, 255, 255)
 local ToolColor = Color3.fromRGB(255, 255, 0)
+local TeamColor = Color3.fromRGB(0, 255, 0) -- 默认队友颜色
 
 -- 存储ESP对象 (使用缓存池优化性能)
 local ESPPool = {
@@ -51,12 +56,55 @@ local ESPPool = {
     RenderCache = {}
 }
 
+-- 玩家状态跟踪
+local PlayerStates = {}
+
 -- 帧率优化变量
 local RenderSteppedConnection = nil
 local LastESPUpdate = 0
-local ESPUpdateRate = 0.03 -- 每秒约33帧，降低CPU占用
+local ESPUpdateRate = 0.03
 local LastCleanup = 0
-local CleanupInterval = 5 -- 每5秒清理一次缓存
+local CleanupInterval = 5
+
+-- 获取玩家队伍颜色
+local function GetPlayerTeamColor(plr)
+    if not plr then return Color3.fromRGB(255, 255, 255) end
+    
+    -- 尝试从TeamColor获取
+    if plr.TeamColor then
+        return plr.TeamColor.Color
+    end
+    
+    -- 尝试从Team对象获取
+    if plr.Team and plr.Team.TeamColor then
+        return plr.Team.TeamColor.Color
+    end
+    
+    -- 尝试从Team的Color属性获取
+    if plr.Team and plr.Team.Color then
+        return plr.Team.Color
+    end
+    
+    -- 默认颜色
+    return Color3.fromRGB(255, 255, 255)
+end
+
+-- 检查是否同一队伍
+local function IsSameTeam(plr1, plr2)
+    if not plr1 or not plr2 then return false end
+    
+    -- 检查TeamColor
+    if plr1.TeamColor and plr2.TeamColor then
+        return plr1.TeamColor == plr2.TeamColor
+    end
+    
+    -- 检查Team对象
+    if plr1.Team and plr2.Team then
+        return plr1.Team == plr2.Team
+    end
+    
+    return false
+end
 
 -- 创建主UI
 local ScreenGui = Instance.new("ScreenGui")
@@ -67,8 +115,8 @@ ScreenGui.Parent = CoreGui
 -- 主容器
 local MainContainer = Instance.new("Frame")
 MainContainer.Name = "MainContainer"
-MainContainer.Size = UDim2.new(0, 600, 0, 550)
-MainContainer.Position = UDim2.new(0.5, -300, 0.5, -275)
+MainContainer.Size = UDim2.new(0, 600, 0, 600) -- 增加高度以容纳新选项
+MainContainer.Position = UDim2.new(0.5, -300, 0.5, -300)
 MainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainContainer.BorderSizePixel = 0
 MainContainer.Visible = true
@@ -99,7 +147,7 @@ TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(1, -60, 1, 0)
 TitleText.Position = UDim2.new(0, 10, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "自瞄+ESP控制面板"
+TitleText.Text = "AIaimbot"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextSize = 14
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -189,7 +237,7 @@ UserText.Parent = UserInfo
 -- 状态显示
 local StatusFrame = Instance.new("Frame")
 StatusFrame.Name = "StatusFrame"
-StatusFrame.Size = UDim2.new(1, -20, 0, 60)
+StatusFrame.Size = UDim2.new(1, -20, 0, 80)
 StatusFrame.Position = UDim2.new(0, 10, 0, 100)
 StatusFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 StatusFrame.BorderSizePixel = 0
@@ -204,7 +252,7 @@ StatusText.Name = "StatusText"
 StatusText.Size = UDim2.new(1, -10, 1, -10)
 StatusText.Position = UDim2.new(0, 5, 0, 5)
 StatusText.BackgroundTransparency = 1
-StatusText.Text = "当前锁定目标: 无\nFOV范围: 100 | 预测: OFF"
+StatusText.Text = "当前锁定目标: 无\nFOV范围: 100 | 预测: OFF\n队伍检查: 开启"
 StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
 StatusText.TextSize = 14
 StatusText.TextXAlignment = Enum.TextXAlignment.Left
@@ -237,11 +285,28 @@ local AimbotToggleCorner = Instance.new("UICorner")
 AimbotToggleCorner.CornerRadius = UDim.new(0, 6)
 AimbotToggleCorner.Parent = AimbotToggleButton
 
+-- 队伍检查开关
+local TeamCheckButton = Instance.new("TextButton")
+TeamCheckButton.Name = "TeamCheckButton"
+TeamCheckButton.Size = UDim2.new(0.8, 0, 0, 35)
+TeamCheckButton.Position = UDim2.new(0.1, 0, 0.12, 0)
+TeamCheckButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+TeamCheckButton.BorderSizePixel = 0
+TeamCheckButton.Text = "忽略队友: 开启"
+TeamCheckButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamCheckButton.TextSize = 14
+TeamCheckButton.Font = Enum.Font.Gotham
+TeamCheckButton.Parent = AimbotPage
+
+local TeamCheckCorner = Instance.new("UICorner")
+TeamCheckCorner.CornerRadius = UDim.new(0, 6)
+TeamCheckCorner.Parent = TeamCheckButton
+
 -- FOV控制
 local FOVLabel = Instance.new("TextLabel")
 FOVLabel.Name = "FOVLabel"
 FOVLabel.Size = UDim2.new(0.8, 0, 0, 20)
-FOVLabel.Position = UDim2.new(0.1, 0, 0.15, 0)
+FOVLabel.Position = UDim2.new(0.1, 0, 0.2, 0)
 FOVLabel.BackgroundTransparency = 1
 FOVLabel.Text = "FOV范围: 100"
 FOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -253,7 +318,7 @@ FOVLabel.Parent = AimbotPage
 local FOVSlider = Instance.new("Frame")
 FOVSlider.Name = "FOVSlider"
 FOVSlider.Size = UDim2.new(0.8, 0, 0, 15)
-FOVSlider.Position = UDim2.new(0.1, 0, 0.2, 0)
+FOVSlider.Position = UDim2.new(0.1, 0, 0.25, 0)
 FOVSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 FOVSlider.BorderSizePixel = 0
 FOVSlider.Parent = AimbotPage
@@ -284,7 +349,7 @@ FOVSliderButton.Parent = FOVSlider
 local PredictionTitle = Instance.new("TextLabel")
 PredictionTitle.Name = "PredictionTitle"
 PredictionTitle.Size = UDim2.new(0.8, 0, 0, 20)
-PredictionTitle.Position = UDim2.new(0.1, 0, 0.25, 0)
+PredictionTitle.Position = UDim2.new(0.1, 0, 0.3, 0)
 PredictionTitle.BackgroundTransparency = 1
 PredictionTitle.Text = "预测延迟"
 PredictionTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -296,7 +361,7 @@ PredictionTitle.Parent = AimbotPage
 local PredictionContainer = Instance.new("Frame")
 PredictionContainer.Name = "PredictionContainer"
 PredictionContainer.Size = UDim2.new(0.8, 0, 0, 35)
-PredictionContainer.Position = UDim2.new(0.1, 0, 0.3, 0)
+PredictionContainer.Position = UDim2.new(0.1, 0, 0.35, 0)
 PredictionContainer.BackgroundTransparency = 1
 PredictionContainer.Parent = AimbotPage
 
@@ -349,7 +414,7 @@ Prediction200Corner.Parent = Prediction200Button
 local AimbotStatusLabel = Instance.new("TextLabel")
 AimbotStatusLabel.Name = "AimbotStatusLabel"
 AimbotStatusLabel.Size = UDim2.new(0.8, 0, 0, 30)
-AimbotStatusLabel.Position = UDim2.new(0.1, 0, 0.4, 0)
+AimbotStatusLabel.Position = UDim2.new(0.1, 0, 0.45, 0)
 AimbotStatusLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 AimbotStatusLabel.BorderSizePixel = 0
 AimbotStatusLabel.Text = "自瞄状态: 关闭 | 锁定: 无"
@@ -387,11 +452,28 @@ local ESPToggleCorner = Instance.new("UICorner")
 ESPToggleCorner.CornerRadius = UDim.new(0, 6)
 ESPToggleCorner.Parent = ESPToggleButton
 
+-- 队伍颜色ESP开关
+local TeamColorButton = Instance.new("TextButton")
+TeamColorButton.Name = "TeamColorButton"
+TeamColorButton.Size = UDim2.new(0.8, 0, 0, 35)
+TeamColorButton.Position = UDim2.new(0.1, 0, 0.12, 0)
+TeamColorButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+TeamColorButton.BorderSizePixel = 0
+TeamColorButton.Text = "队伍颜色: 开启"
+TeamColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamColorButton.TextSize = 14
+TeamColorButton.Font = Enum.Font.Gotham
+TeamColorButton.Parent = ESPPage
+
+local TeamColorCorner = Instance.new("UICorner")
+TeamColorCorner.CornerRadius = UDim.new(0, 6)
+TeamColorCorner.Parent = TeamColorButton
+
 -- ESP选项容器
 local ESPOptionsContainer = Instance.new("Frame")
 ESPOptionsContainer.Name = "ESPOptionsContainer"
-ESPOptionsContainer.Size = UDim2.new(0.8, 0, 0, 200)
-ESPOptionsContainer.Position = UDim2.new(0.1, 0, 0.15, 0)
+ESPOptionsContainer.Size = UDim2.new(0.8, 0, 0, 240)
+ESPOptionsContainer.Position = UDim2.new(0.1, 0, 0.2, 0)
 ESPOptionsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 ESPOptionsContainer.BorderSizePixel = 0
 ESPOptionsContainer.Parent = ESPPage
@@ -417,7 +499,7 @@ ESPOptionsTitle.Parent = ESPOptionsContainer
 local BoxESPButton = Instance.new("TextButton")
 BoxESPButton.Name = "BoxESPButton"
 BoxESPButton.Size = UDim2.new(0.45, -5, 0, 30)
-BoxESPButton.Position = UDim2.new(0.05, 0, 0.2, 0)
+BoxESPButton.Position = UDim2.new(0.05, 0, 0.15, 0)
 BoxESPButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
 BoxESPButton.BorderSizePixel = 0
 BoxESPButton.Text = "玩家方框: ON"
@@ -434,7 +516,7 @@ BoxESPCorner.Parent = BoxESPButton
 local BoxColorButton = Instance.new("TextButton")
 BoxColorButton.Name = "BoxColorButton"
 BoxColorButton.Size = UDim2.new(0.45, -5, 0, 30)
-BoxColorButton.Position = UDim2.new(0.55, 0, 0.2, 0)
+BoxColorButton.Position = UDim2.new(0.55, 0, 0.15, 0)
 BoxColorButton.BackgroundColor3 = BoxColor
 BoxColorButton.BorderSizePixel = 0
 BoxColorButton.Text = "方框颜色"
@@ -451,7 +533,7 @@ BoxColorCorner.Parent = BoxColorButton
 local SkeletonESPButton = Instance.new("TextButton")
 SkeletonESPButton.Name = "SkeletonESPButton"
 SkeletonESPButton.Size = UDim2.new(0.45, -5, 0, 30)
-SkeletonESPButton.Position = UDim2.new(0.05, 0, 0.35, 0)
+SkeletonESPButton.Position = UDim2.new(0.05, 0, 0.3, 0)
 SkeletonESPButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
 SkeletonESPButton.BorderSizePixel = 0
 SkeletonESPButton.Text = "玩家骨骼: ON"
@@ -468,7 +550,7 @@ SkeletonESPCorner.Parent = SkeletonESPButton
 local SkeletonColorButton = Instance.new("TextButton")
 SkeletonColorButton.Name = "SkeletonColorButton"
 SkeletonColorButton.Size = UDim2.new(0.45, -5, 0, 30)
-SkeletonColorButton.Position = UDim2.new(0.55, 0, 0.35, 0)
+SkeletonColorButton.Position = UDim2.new(0.55, 0, 0.3, 0)
 SkeletonColorButton.BackgroundColor3 = SkeletonColor
 SkeletonColorButton.BorderSizePixel = 0
 SkeletonColorButton.Text = "骨骼颜色"
@@ -485,7 +567,7 @@ SkeletonColorCorner.Parent = SkeletonColorButton
 local NameESPButton = Instance.new("TextButton")
 NameESPButton.Name = "NameESPButton"
 NameESPButton.Size = UDim2.new(0.45, -5, 0, 30)
-NameESPButton.Position = UDim2.new(0.05, 0, 0.5, 0)
+NameESPButton.Position = UDim2.new(0.05, 0, 0.45, 0)
 NameESPButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
 NameESPButton.BorderSizePixel = 0
 NameESPButton.Text = "玩家名字: ON"
@@ -502,7 +584,7 @@ NameESPCorner.Parent = NameESPButton
 local NameColorButton = Instance.new("TextButton")
 NameColorButton.Name = "NameColorButton"
 NameColorButton.Size = UDim2.new(0.45, -5, 0, 30)
-NameColorButton.Position = UDim2.new(0.55, 0, 0.5, 0)
+NameColorButton.Position = UDim2.new(0.55, 0, 0.45, 0)
 NameColorButton.BackgroundColor3 = NameColor
 NameColorButton.BorderSizePixel = 0
 NameColorButton.Text = "名字颜色"
@@ -519,7 +601,7 @@ NameColorCorner.Parent = NameColorButton
 local ToolESPButton = Instance.new("TextButton")
 ToolESPButton.Name = "ToolESPButton"
 ToolESPButton.Size = UDim2.new(0.45, -5, 0, 30)
-ToolESPButton.Position = UDim2.new(0.05, 0, 0.65, 0)
+ToolESPButton.Position = UDim2.new(0.05, 0, 0.6, 0)
 ToolESPButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
 ToolESPButton.BorderSizePixel = 0
 ToolESPButton.Text = "手持物品: ON"
@@ -536,7 +618,7 @@ ToolESPCorner.Parent = ToolESPButton
 local ToolColorButton = Instance.new("TextButton")
 ToolColorButton.Name = "ToolColorButton"
 ToolColorButton.Size = UDim2.new(0.45, -5, 0, 30)
-ToolColorButton.Position = UDim2.new(0.55, 0, 0.65, 0)
+ToolColorButton.Position = UDim2.new(0.55, 0, 0.6, 0)
 ToolColorButton.BackgroundColor3 = ToolColor
 ToolColorButton.BorderSizePixel = 0
 ToolColorButton.Text = "物品颜色"
@@ -553,7 +635,7 @@ ToolColorCorner.Parent = ToolColorButton
 local ESPStatusLabel = Instance.new("TextLabel")
 ESPStatusLabel.Name = "ESPStatusLabel"
 ESPStatusLabel.Size = UDim2.new(0.8, 0, 0, 30)
-ESPStatusLabel.Position = UDim2.new(0.1, 0, 0.65, 0)
+ESPStatusLabel.Position = UDim2.new(0.1, 0, 0.7, 0)
 ESPStatusLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 ESPStatusLabel.BorderSizePixel = 0
 ESPStatusLabel.Text = "ESP状态: 关闭 | 已缓存: 0"
@@ -624,11 +706,11 @@ HideUICorner.Parent = HideUIButton
 -- 性能优化提示
 local PerformanceLabel = Instance.new("TextLabel")
 PerformanceLabel.Name = "PerformanceLabel"
-PerformanceLabel.Size = UDim2.new(0.8, 0, 0, 60)
+PerformanceLabel.Size = UDim2.new(0.8, 0, 0, 80)
 PerformanceLabel.Position = UDim2.new(0.1, 0, 0.4, 0)
 PerformanceLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 PerformanceLabel.BorderSizePixel = 0
-PerformanceLabel.Text = "性能优化已启用\nESP更新频率: 33FPS | 缓存自动清理"
+PerformanceLabel.Text = "性能优化已启用\nESP更新频率: 33FPS\n队伍检查: 开启\n队伍颜色: 根据排行榜自动变化"
 PerformanceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 PerformanceLabel.TextSize = 13
 PerformanceLabel.Font = Enum.Font.Gotham
@@ -662,7 +744,7 @@ MinimizedButton.Size = UDim2.new(0, 50, 0, 50)
 MinimizedButton.Position = UDim2.new(0, 10, 0, 10)
 MinimizedButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 MinimizedButton.BorderSizePixel = 0
-MinimizedButton.Text = "A+E"
+MinimizedButton.Text = "Sky"
 MinimizedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizedButton.TextSize = 16
 MinimizedButton.Visible = false
@@ -722,6 +804,16 @@ end
 
 AimbotToggleButton.MouseButton1Click:Connect(ToggleAimbot)
 
+-- 队伍检查开关
+local function ToggleTeamCheck()
+    IgnoreTeam = not IgnoreTeam
+    TeamCheckButton.Text = "忽略队友: " .. (IgnoreTeam and "开启" or "关闭")
+    TeamCheckButton.BackgroundColor3 = IgnoreTeam and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(200, 60, 60)
+    StatusText.Text = "当前锁定目标: " .. (LockedTarget and LockedTarget.Name or "无") .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF") .. "\n队伍检查: " .. (IgnoreTeam and "开启" or "关闭")
+end
+
+TeamCheckButton.MouseButton1Click:Connect(ToggleTeamCheck)
+
 -- 预测按钮功能
 local function SetupPredictionButton(button, ping)
     button.MouseButton1Click:Connect(function()
@@ -745,7 +837,7 @@ local function SetupPredictionButton(button, ping)
             button.Text = ping .. "ms ON"
         end
         
-        StatusText.Text = "当前锁定目标: " .. (LockedTarget and LockedTarget.Name or "无") .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and ping .. "ms" or "OFF")
+        StatusText.Text = "当前锁定目标: " .. (LockedTarget and LockedTarget.Name or "无") .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and ping .. "ms" or "OFF") .. "\n队伍检查: " .. (IgnoreTeam and "开启" or "关闭")
     end)
 end
 
@@ -767,7 +859,7 @@ FOVSliderButton.MouseButton1Down:Connect(function()
             FOV = math.floor(ratio * 300)
             FOVSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
             FOVLabel.Text = "FOV范围: " .. FOV
-            StatusText.Text = "当前锁定目标: " .. (LockedTarget and LockedTarget.Name or "无") .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF")
+            StatusText.Text = "当前锁定目标: " .. (LockedTarget and LockedTarget.Name or "无") .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF") .. "\n队伍检查: " .. (IgnoreTeam and "开启" or "关闭")
         end
     end)
     
@@ -792,17 +884,32 @@ local function ClearAllESP()
     
     -- 清理Drawing对象
     for _, lines in pairs(ESPPool.SkeletonLines) do
-        for _, line in ipairs(lines) do
-            pcall(function() line:Destroy() end)
+        if lines then
+            for _, line in ipairs(lines) do
+                pcall(function() line:Destroy() end)
+            end
         end
     end
     
     for _, label in pairs(ESPPool.NameLabels) do
-        pcall(function() label:Destroy() end)
+        if label then
+            pcall(function() label:Destroy() end)
+        end
     end
     
     for _, label in pairs(ESPPool.ToolLabels) do
-        pcall(function() label:Destroy() end)
+        if label then
+            pcall(function() label:Destroy() end)
+        end
+    end
+    
+    -- 清理渲染缓存
+    for _, obj in pairs(ESPPool.RenderCache) do
+        if obj and obj.Destroy then
+            pcall(function() obj:Destroy() end)
+        elseif obj and obj.Remove then
+            pcall(function() obj:Remove() end)
+        end
     end
     
     ESPPool.Highlights = {}
@@ -824,10 +931,22 @@ local function ToggleESP()
     
     -- 更新状态
     UserText.Text = "用户: " .. player.Name .. "\n注入器: " .. injectorName .. "\n状态: 自瞄" .. (AimbotEnabled and "ON" or "OFF") .. " | ESP " .. (ESPEnabled and "ON" or "OFF")
-    ESPStatusLabel.Text = "ESP状态: " .. (ESPEnabled and "开启" or "关闭") .. " | 已缓存: " .. #ESPPool.Highlights
+    
+    local highlightCount = 0
+    for _ in pairs(ESPPool.Highlights) do highlightCount = highlightCount + 1 end
+    ESPStatusLabel.Text = "ESP状态: " .. (ESPEnabled and "开启" or "关闭") .. " | 已缓存: " .. highlightCount
 end
 
 ESPToggleButton.MouseButton1Click:Connect(ToggleESP)
+
+-- 队伍颜色ESP开关
+local function ToggleTeamColor()
+    TeamColorESPEnabled = not TeamColorESPEnabled
+    TeamColorButton.Text = "队伍颜色: " .. (TeamColorESPEnabled and "开启" or "关闭")
+    TeamColorButton.BackgroundColor3 = TeamColorESPEnabled and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(200, 60, 60)
+end
+
+TeamColorButton.MouseButton1Click:Connect(ToggleTeamColor)
 
 -- 切换ESP子选项
 BoxESPButton.MouseButton1Click:Connect(function()
@@ -839,6 +958,12 @@ BoxESPButton.MouseButton1Click:Connect(function()
         for _, highlight in pairs(ESPPool.Highlights) do
             if highlight then
                 highlight.OutlineTransparency = 1
+            end
+        end
+    else
+        for _, highlight in pairs(ESPPool.Highlights) do
+            if highlight then
+                highlight.OutlineTransparency = 0.2
             end
         end
     end
@@ -1033,14 +1158,26 @@ UserInputService.InputEnded:Connect(function(input)
         IsHoldingMouse2 = false
         LockedTarget = nil
         AimbotStatusLabel.Text = "自瞄状态: " .. (AimbotEnabled and "ON" or "OFF") .. " | 锁定: 无"
-        StatusText.Text = "当前锁定目标: 无\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF")
+        StatusText.Text = "当前锁定目标: 无\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF") .. "\n队伍检查: " .. (IgnoreTeam and "开启" or "关闭")
     end
 end)
 
+-- 获取最近玩家（带队伍检查）
 local function GetClosestPlayer()
     local closestPlayer, shortestDistance = nil, FOV
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
+            -- 队伍检查
+            if IgnoreTeam and IsSameTeam(player, p) then
+                continue
+            end
+            
+            -- 检查玩家是否存活
+            local humanoid = p.Character:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then
+                continue
+            end
+            
             local targetPos = p.Character.Head.Position
             local screenPoint = camera:WorldToViewportPoint(targetPos)
             if screenPoint.Z > 0 then
@@ -1070,17 +1207,21 @@ local function UpdateESP()
     if currentTime - LastESPUpdate < ESPUpdateRate then return end
     LastESPUpdate = currentTime
     
-    -- 每5秒清理缓存
+    -- 每5秒清理缓存并更新计数
     if currentTime - LastCleanup > CleanupInterval then
         LastCleanup = currentTime
-        ESPStatusLabel.Text = "ESP状态: " .. (ESPEnabled and "开启" or "关闭") .. " | 已缓存: " .. #ESPPool.Highlights
+        local highlightCount = 0
+        for _ in pairs(ESPPool.Highlights) do highlightCount = highlightCount + 1 end
+        ESPStatusLabel.Text = "ESP状态: " .. (ESPEnabled and "开启" or "关闭") .. " | 已缓存: " .. highlightCount
     end
     
     if not ESPEnabled then return end
     
     -- 清理旧的Drawing线条
     for key, line in pairs(ESPPool.RenderCache) do
-        line.Visible = false
+        if line and line.Visible ~= nil then
+            line.Visible = false
+        end
     end
     
     for _, p in ipairs(Players:GetPlayers()) do
@@ -1089,41 +1230,58 @@ local function UpdateESP()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             local rootPart = character:FindFirstChild("HumanoidRootPart")
             
-            if humanoid and humanoid.Health > 0 and rootPart then
-                -- 方框ESP (Highlight)
-                if BoxESPEnabled then
-                    if not ESPPool.Highlights[p] then
-                        local highlight = Instance.new("Highlight")
-                        highlight.Adornee = character
-                        highlight.FillColor = BoxColor
-                        highlight.FillTransparency = 1
+            -- 检查玩家是否存活
+            local isAlive = humanoid and humanoid.Health > 0 and rootPart
+            
+            -- 获取队伍颜色
+            local teamColor = GetPlayerTeamColor(p)
+            
+            -- 方框ESP (Highlight)
+            if BoxESPEnabled and isAlive then
+                if not ESPPool.Highlights[p] then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Adornee = character
+                    highlight.FillColor = teamColor
+                    highlight.FillTransparency = 1
+                    
+                    -- 根据队伍颜色设置边框颜色
+                    if TeamColorESPEnabled and IsSameTeam(player, p) then
+                        highlight.OutlineColor = teamColor
+                    else
                         highlight.OutlineColor = BoxColor
-                        highlight.OutlineTransparency = 0.2
-                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                        highlight.Parent = character
-                        ESPPool.Highlights[p] = highlight
+                    end
+                    
+                    highlight.OutlineTransparency = 0.2
+                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    highlight.Parent = character
+                    ESPPool.Highlights[p] = highlight
+                else
+                    -- 更新Highlight颜色
+                    if TeamColorESPEnabled and IsSameTeam(player, p) then
+                        ESPPool.Highlights[p].OutlineColor = teamColor
                     else
                         ESPPool.Highlights[p].OutlineColor = BoxColor
-                        ESPPool.Highlights[p].OutlineTransparency = 0.2
                     end
-                else
-                    if ESPPool.Highlights[p] then
-                        ESPPool.Highlights[p].OutlineTransparency = 1
-                    end
+                    ESPPool.Highlights[p].OutlineTransparency = 0.2
                 end
-                
+            elseif ESPPool.Highlights[p] then
+                -- 玩家死亡或关闭ESP时隐藏
+                ESPPool.Highlights[p].OutlineTransparency = 1
+            end
+            
+            if isAlive and rootPart then
                 local screenPos = camera:WorldToViewportPoint(rootPart.Position)
                 if screenPos.Z > 0 then
+                    -- 确定当前使用的颜色（队伍色或自定义色）
+                    local currentColor = (TeamColorESPEnabled and IsSameTeam(player, p)) and teamColor or NameColor
+                    
                     -- 骨骼ESP
                     if SkeletonESPEnabled then
+                        local skeletonColor = (TeamColorESPEnabled and IsSameTeam(player, p)) and teamColor or SkeletonColor
                         local connections = GetSkeletonConnections(character)
                         for i, conn in ipairs(connections) do
                             local cacheKey = p.UserId .. "_skeleton_" .. i
-                            local line = CreateDrawingLine(conn[1], conn[2], SkeletonColor, cacheKey)
-                            if line then
-                                ESPPool.SkeletonLines[p] = ESPPool.SkeletonLines[p] or {}
-                                table.insert(ESPPool.SkeletonLines[p], line)
-                            end
+                            local line = CreateDrawingLine(conn[1], conn[2], skeletonColor, cacheKey)
                         end
                     end
                     
@@ -1133,13 +1291,13 @@ local function UpdateESP()
                         if ESPPool.RenderCache[cacheKey] then
                             local label = ESPPool.RenderCache[cacheKey]
                             label.Text = p.Name
-                            label.Color = NameColor
+                            label.Color = currentColor
                             label.Position = Vector2.new(screenPos.X, screenPos.Y - 30)
                             label.Visible = true
                         else
                             local label = Drawing.new("Text")
                             label.Text = p.Name
-                            label.Color = NameColor
+                            label.Color = currentColor
                             label.Size = 16
                             label.Center = true
                             label.Outline = true
@@ -1154,17 +1312,18 @@ local function UpdateESP()
                     if ToolESPEnabled then
                         local tool = character:FindFirstChildOfClass("Tool")
                         if tool then
+                            local toolColor = (TeamColorESPEnabled and IsSameTeam(player, p)) and teamColor or ToolColor
                             local cacheKey = p.UserId .. "_tool"
                             if ESPPool.RenderCache[cacheKey] then
                                 local label = ESPPool.RenderCache[cacheKey]
                                 label.Text = "[" .. tool.Name .. "]"
-                                label.Color = ToolColor
+                                label.Color = toolColor
                                 label.Position = Vector2.new(screenPos.X, screenPos.Y - 50)
                                 label.Visible = true
                             else
                                 local label = Drawing.new("Text")
                                 label.Text = "[" .. tool.Name .. "]"
-                                label.Color = ToolColor
+                                label.Color = toolColor
                                 label.Size = 14
                                 label.Center = true
                                 label.Outline = true
@@ -1183,23 +1342,37 @@ end
 
 -- ============== 主渲染循环 ==============
 RunService.RenderStepped:Connect(function()
-    -- 自瞄逻辑
+    -- 自瞄逻辑 - 只有按住右键时才瞄准
     if AimbotEnabled and IsHoldingMouse2 then
         if not LockedTarget then 
             LockedTarget = GetClosestPlayer()
             if LockedTarget then
                 AimbotStatusLabel.Text = "自瞄状态: ON | 锁定: " .. LockedTarget.Name
-                StatusText.Text = "当前锁定目标: " .. LockedTarget.Name .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF")
+                StatusText.Text = "当前锁定目标: " .. LockedTarget.Name .. "\nFOV范围: " .. FOV .. " | 预测: " .. (PredictionEnabled and PredictionPing .. "ms" or "OFF") .. "\n队伍检查: " .. (IgnoreTeam and "开启" or "关闭")
             end
         end
         if LockedTarget and LockedTarget.Character and LockedTarget.Character:FindFirstChild("Head") then
-            local targetPos = LockedTarget.Character.Head.Position
-            if PredictionEnabled then
-                local velocity = LockedTarget.Character.Head.Velocity
-                targetPos = targetPos + velocity * (PredictionPing / 1000)
+            -- 检查锁定目标是否仍然有效
+            local humanoid = LockedTarget.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                -- 再次检查队伍（防止切换队伍）
+                if not (IgnoreTeam and IsSameTeam(player, LockedTarget)) then
+                    local targetPos = LockedTarget.Character.Head.Position
+                    if PredictionEnabled then
+                        local velocity = LockedTarget.Character.Head.Velocity
+                        targetPos = targetPos + velocity * (PredictionPing / 1000)
+                    end
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+                else
+                    LockedTarget = nil
+                end
+            else
+                -- 目标死亡，清除锁定
+                LockedTarget = nil
             end
-            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
         end
+    elseif not IsHoldingMouse2 then
+        LockedTarget = nil
     end
     
     -- FOV圆圈
@@ -1223,8 +1396,8 @@ local function createOpenAnimation()
     MainContainer.Visible = true
     MinimizedButton.Visible = false
     
-    local originalSize = UDim2.new(0, 600, 0, 550)
-    local originalPosition = UDim2.new(0.5, -300, 0.5, -275)
+    local originalSize = UDim2.new(0, 600, 0, 600)
+    local originalPosition = UDim2.new(0.5, -300, 0.5, -300)
     
     local buttonPos = MinimizedButton.AbsolutePosition
     local buttonSize = MinimizedButton.AbsoluteSize
@@ -1289,7 +1462,7 @@ MinimizedButton.MouseButton1Click:Connect(createOpenAnimation)
 
 -- 重置UI位置
 local function resetUIPosition()
-    MainContainer.Position = UDim2.new(0.5, -300, 0.5, -275)
+    MainContainer.Position = UDim2.new(0.5, -300, 0.5, -300)
     MinimizedButton.Position = UDim2.new(0, 10, 0, 10)
 end
 
@@ -1331,12 +1504,18 @@ Players.PlayerAdded:Connect(function(plr)
     if ESPEnabled and BoxESPEnabled then
         plr.CharacterAdded:Connect(function(character)
             task.wait(0.5)
-            if ESPEnabled and BoxESPEnabled and character then
+            if ESPEnabled and BoxESPEnabled and character and plr ~= player then
                 local highlight = Instance.new("Highlight")
                 highlight.Adornee = character
-                highlight.FillColor = BoxColor
+                highlight.FillColor = GetPlayerTeamColor(plr)
                 highlight.FillTransparency = 1
-                highlight.OutlineColor = BoxColor
+                
+                if TeamColorESPEnabled and IsSameTeam(player, plr) then
+                    highlight.OutlineColor = GetPlayerTeamColor(plr)
+                else
+                    highlight.OutlineColor = BoxColor
+                end
+                
                 highlight.OutlineTransparency = 0.2
                 highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 highlight.Parent = character
@@ -1355,8 +1534,8 @@ Players.PlayerRemoving:Connect(function(plr)
 end)
 
 -- 初始化
-print("自瞄+ESP控制面板加载完成！")
-print("优化特性: ESP限帧渲染 | 缓存池 | 自动清理")
+print("加载完成QwQ")
+print("更新: 队伍检查 | 队伍颜色ESP | 死亡自动清除 | 限帧渲染")
 ]]))
 
 if not success then
