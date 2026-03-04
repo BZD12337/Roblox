@@ -1,0 +1,16 @@
+game:GetService("StarterGui"):SetCore("SendNotification", {
+  Title = "cat.gg",
+  Text = "欢迎使用cat.gg",
+})
+wait(1.5)
+game:GetService("StarterGui"):SetCore("SendNotification", {
+  Title = "正在绕过反作弊ing",
+  Text = "加载卡顿 请多多包容",
+})
+wait(1.5)
+game:GetService("StarterGui"):SetCore("SendNotification", {
+  Title = "您的购买就是对我们的支持",
+  Text = "感谢购买",
+})
+wait(2)
+game.Players.LocalPlayer:Kick("天下没有免费的午餐")
