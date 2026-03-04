@@ -1,3 +1,4 @@
+--好吧 整蛊失败
 game:GetService("StarterGui"):SetCore("SendNotification", {
   Title = "cat.gg",
   Text = "欢迎使用cat.gg",
