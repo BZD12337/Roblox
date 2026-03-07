@@ -1,0 +1,177 @@
+game:GetService("StarterGui"):SetCore("SendNotification", {
+  Title = "你已被我发现",
+  Text = "不是你配开你那个农民脚本吗",
+})
+wait(1.5)
+game:GetService("StarterGui"):SetCore("SendNotification", {
+  Title = "😂",
+  Text = "我劝你赶紧退出",
+})
+wait(5)
+game:GetService("StarterGui"):SetCore("SendNotification", {
+  Title = "不听劝是不？",
+  Text = "😂",
+})
+wait(2)
+--[[
+	恶搞客户端脚本（弹窗永久版）
+	配置部分：请根据需求修改下面的变量
+--]]
+
+-- 图片ID列表（循环播放，至少一个）
+local imageIds = {
+	"rbxassetid://158118263",
+	"rbxassetid://158118263",
+	-- 可以继续添加更多
+}
+
+-- 歌曲ID列表（循环播放，至少一个）
+local songIds = {
+	"rbxassetid://122906560516358",
+	"rbxassetid://122906560516358",
+	-- 可以继续添加更多
+}
+
+-- 弹窗文字
+local popupText = "你开你M"
+
+-- 等待多少秒后踢出玩家
+local kickDelay = 8
+
+-- 弹窗生成间隔（秒），更频繁（0.1～0.3秒随机）
+local popupMinInterval = 0
+local popupMaxInterval = 0.1
+
+--[[
+	脚本主体，一般无需修改以下内容（除非要调试）
+--]]
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local runService = game:GetService("RunService")
+
+-- 创建主GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PrankGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+screenGui.DisplayOrder = 999   -- 确保在最上层
+
+-- 1. 循环显示图片（全屏大图）
+local imageLabel = Instance.new("ImageLabel")
+imageLabel.Size = UDim2.new(1, 0, 1, 0)
+imageLabel.BackgroundTransparency = 1
+imageLabel.Parent = screenGui
+
+-- 图片索引
+local currentImageIndex = 1
+
+-- 更换图片的函数
+local function changeImage()
+	imageLabel.Image = imageIds[currentImageIndex]
+	currentImageIndex = currentImageIndex % #imageIds + 1
+end
+
+-- 启动图片循环（每0.5秒换一张）
+task.spawn(function()
+	while true do
+		changeImage()
+		task.wait(5)
+	end
+end)
+
+-- 2. 循环播放歌曲（确保音量足够，并处理播放失败情况）
+local sound = Instance.new("Sound")
+sound.SoundId = songIds[1]  -- 先设为第一首
+sound.Looped = false        -- 用 Ended 事件实现循环
+sound.Volume = 1            -- 最大音量
+sound.Parent = screenGui
+
+local currentSongIndex = 1
+local function playNextSong()
+	currentSongIndex = currentSongIndex % #songIds + 1
+	sound.SoundId = songIds[currentSongIndex]
+	-- 延迟一小段时间再播放，确保 SoundId 生效
+	task.wait(0.1)
+	sound:Play()
+end
+
+sound.Ended:Connect(playNextSong)
+
+-- 开始播放第一首
+task.wait(0.2)
+sound:Play()
+
+-- 可选：如果声音未播放，尝试再次触发
+task.wait(1)
+if not sound.Playing then
+	sound:Play()
+end
+
+task.spawn(function()
+	while true do
+		local popup = Instance.new("TextLabel")
+		popup.Size = UDim2.new(0, 200, 0, 50)
+		-- 随机位置，避免完全重叠
+		popup.Position = UDim2.new(math.random(0, 80)/100, 0, math.random(0, 80)/100, 0)
+		popup.BackgroundColor3 = Color3.new(1, 0, 0)    -- 红色背景
+		popup.BackgroundTransparency = 0
+		popup.Text = popupText
+		popup.TextSize = 35
+		popup.Font = Enum.Font.SourceSansBold
+		popup.Rotation = 0  -- 保持正向
+		popup.BorderSizePixel = 2
+		popup.BorderColor3 = Color3.new(1, 1, 1)
+		popup.Parent = screenGui
+
+		-- 注意：没有销毁代码，弹窗永久保留
+		
+		-- 随机间隔生成下一个弹窗（更密集）
+		task.wait(math.random(popupMinInterval * 100, popupMaxInterval * 100) / 100)
+	end
+end)
+
+-- 4. 将所有物品贴图改成指定图片（使用第一个图片ID作为替换图）
+local replacementImage = imageIds[1]  -- 用第一张图片替换所有贴图
+
+-- 递归遍历并修改所有带有 Image / TextureId 属性的实例
+local function replaceTextures(instance)
+	local success, result = pcall(function()
+		if instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
+			instance.Image = replacementImage
+		elseif instance:IsA("Decal") or instance:IsA("Texture") then
+			instance.Texture = replacementImage
+		elseif instance:IsA("BillboardGui") or instance:IsA("SurfaceGui") then
+			-- 无需处理，继续遍历子级
+		elseif instance:IsA("Part") or instance:IsA("MeshPart") then
+			-- 可能包含贴花，遍历子级
+		end
+	end)
+	if not success then
+		warn("替换贴图时出错:", result)
+	end
+
+	for _, child in ipairs(instance:GetChildren()) do
+		replaceTextures(child)
+	end
+end
+
+-- 首次遍历整个数据模型
+replaceTextures(game)
+
+-- 监听新加入的对象，立即替换贴图
+game.DescendantAdded:Connect(function(descendant)
+	replaceTextures(descendant)
+end)
+
+-- 额外：每隔5秒全面刷新一次，以防某些对象未被覆盖
+task.spawn(function()
+	while true do
+		task.wait(5)
+		replaceTextures(game)
+	end
+end)
+
+-- 5. 等待指定时间后踢出玩家
+task.wait(kickDelay)
+player:Kick("你开你M")  -- 断开客户端连接
